@@ -8,6 +8,8 @@ package org.sensorhub.impl.sensor.pibot.drive;
 import org.sensorhub.api.config.DisplayInfo;
 import org.sensorhub.api.sensor.SensorConfig;
 
+import java.util.EnumSet;
+
 /**
  * Configuration settings for the DriveSensor Driver exposed via the OpenSensorHub Admin panel.
  *
@@ -24,6 +26,26 @@ import org.sensorhub.api.sensor.SensorConfig;
  * @since Feb. 15, 2021
  */
 public class DriveConfig extends SensorConfig {
+
+    public enum MsgTypes{
+        GPS_STATUS,
+        GPS_RAW_INT,
+        GLOBAL_POSITION,
+        BATTERY_STATUS
+
+    }
+    public enum CmdTypes{
+        VELOCITY,
+
+
+    }
+
+    @DisplayInfo(desc="Pibot messages to expose through this sensor interface")
+    public EnumSet<MsgTypes> activeMessages = EnumSet.noneOf(MsgTypes.class);
+
+    @DisplayInfo(desc="Pibot commands to expose through this sensor interface")
+    public EnumSet<CmdTypes> activeCommands = EnumSet.noneOf(CmdTypes.class);
+
 
     /**
      * The unique identifier for the configured UAS sensor platform.

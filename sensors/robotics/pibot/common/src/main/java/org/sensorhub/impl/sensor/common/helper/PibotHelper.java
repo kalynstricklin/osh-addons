@@ -1,8 +1,9 @@
 package org.sensorhub.impl.sensor.common.helper;
 
 import net.opengis.swe.v20.*;
+import net.opengis.swe.v20.Boolean;
 import org.vast.swe.SWEHelper;
-
+import org.vast.swe.helper.GeoPosHelper;
 
 
 /**
@@ -95,22 +96,42 @@ public class PibotHelper extends SWEHelper {
     {
         // NOTE: commands are individual and supported using DataChoice
 
-        DataChoice driveCommand = this.newDataChoice();
-        driveCommand.setName(name);
+        DataChoice commandData = this.newDataChoice();
+        commandData.setName(name);
 
-        // direction and Power
-        driveCommand.addItem(FORWARD, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(FORWARD_TURN_LEFT, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(FORWARD_TURN_RIGHT, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(REVERSE, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(REVERSE_TURN_LEFT, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(REVERSE_TURN_RIGHT, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(SPIN_LEFT, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(SPIN_RIGHT, getPowerComponent(minPower,maxPower));
-        driveCommand.addItem(STOP, getPowerComponent(minPower,maxPower));
+        Quantity forward = getPowerComponent(minPower, maxPower);
+        commandData.addItem(FORWARD, forward);
+        Quantity reverse = getPowerComponent(minPower, maxPower);
+        commandData.addItem(REVERSE, reverse);
+        Quantity stop = getPowerComponent(minPower, maxPower);
+        commandData.addItem(STOP, stop);
+        Quantity left = getPowerComponent(minPower, maxPower);
+        commandData.addItem(SPIN_LEFT, left);
+        Quantity right = getPowerComponent(minPower, maxPower);
+        commandData.addItem(SPIN_RIGHT, right);
+        Quantity forwardRight = getPowerComponent(minPower, maxPower);
+        commandData.addItem(FORWARD_TURN_RIGHT, forwardRight);
+        Quantity reverseRight = getPowerComponent(minPower, maxPower);
+        commandData.addItem(REVERSE_TURN_RIGHT, reverseRight);
+        Quantity forwardLeft = getPowerComponent(minPower, maxPower);
+        commandData.addItem(FORWARD_TURN_LEFT, forwardLeft);
+        Quantity reverseLeft = getPowerComponent(minPower, maxPower);
+        commandData.addItem(REVERSE_TURN_LEFT, reverseLeft);
 
-        return driveCommand;
+
+//        commandData.add(home)
+        return commandData;
     }
+
+
+    public Vector home(double latitude, double longitude){
+        GeoPosHelper geo = new GeoPosHelper();
+        Vector longlat = geo.newLocationVectorLatLon(getPropertyUri("HomeLocation"));
+        longlat.setLabel("Home");
+        longlat.setDescription("Home Location of Pibot Robot");
+        return longlat;
+    }
+
 
 
     public Quantity getPowerComponent(double min, double max){

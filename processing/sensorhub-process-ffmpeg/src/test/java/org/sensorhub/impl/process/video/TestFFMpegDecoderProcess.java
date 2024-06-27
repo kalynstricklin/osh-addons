@@ -100,7 +100,7 @@ public class TestFFMpegDecoderProcess
         registry = hub.getModuleRegistry();
         
         createSensorDataSource1();
-        String smlUrl = TestFFMpegDecoderProcess.class.getResource("processchain-decode-ffmpeg.xml").getFile();
+        String smlUrl = TestFFMpegDecoderProcess.class.getResource("processchain-decode-template.xml").getFile();
         IProcessModule<?> process = createSMLProcess(smlUrl);
         runProcess(process);
     }

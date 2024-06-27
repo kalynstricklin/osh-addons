@@ -79,17 +79,23 @@ public class DriveControl extends AbstractSensorControl<DriveSensor> {
             getLogger().debug("power: {}", power);
 
             if(itemID.equalsIgnoreCase("Forward")){
-//                direction = DriveDirection.fromString(itemID);
                 parentSensor.forward(power);
             }else if(itemID.equalsIgnoreCase("Reverse")){
-//                direction = DriveDirection.fromString(itemID);
                 parentSensor.reverse(power);
             }else if (itemID.equalsIgnoreCase("Spin_Left")) {
-//                direction = DriveDirection.fromString(itemID);
                 parent.spinLeft(power);
             } else if (itemID.equalsIgnoreCase("Spin_Right")) {
-//                direction = DriveDirection.fromString(itemID);
                 parentSensor.spinRight(power);
+            }else if (itemID.equalsIgnoreCase("Forward_Right")) {
+                parentSensor.forwardRight(power);
+            }else if (itemID.equalsIgnoreCase("Forward_Left")) {
+                parentSensor.forwardLeft(power);
+            }else if (itemID.equalsIgnoreCase("Reverse_Right")) {
+                parentSensor.reverseRight(power);
+            } else if (itemID.equalsIgnoreCase("Reverse_Left")) {
+                parentSensor.reverseLeft(power);
+            }else if (itemID.equalsIgnoreCase("Stop")) {
+                parentSensor.stop(power);
             }else{
                 commandExecuted = false;
             }

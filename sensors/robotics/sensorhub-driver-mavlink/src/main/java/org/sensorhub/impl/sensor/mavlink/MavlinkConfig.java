@@ -45,7 +45,6 @@ public class MavlinkConfig extends SensorConfig
         ORBIT,
         RTL,
         LAND,
-        
         MOUNT_CONTROL,
         MOUNT_TARGET,
     }

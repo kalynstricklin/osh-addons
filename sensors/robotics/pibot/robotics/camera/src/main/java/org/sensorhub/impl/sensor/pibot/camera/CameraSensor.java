@@ -42,7 +42,7 @@ public class CameraSensor extends AbstractSensorModule<CameraConfig> {
         super.doInit();
 
         // Generate identifiers
-        generateUniqueID("urn:sentinel:pibot:", config.serialNumber);
+        generateUniqueID("urn:pibot:", config.serialNumber);
         generateXmlID("SENTINEL_PIBOT", config.serialNumber);
 
         // Create and initialize output

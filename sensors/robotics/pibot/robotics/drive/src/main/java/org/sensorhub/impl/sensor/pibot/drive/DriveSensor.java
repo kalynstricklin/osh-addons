@@ -294,17 +294,18 @@ public class DriveSensor extends AbstractSensorModule<DriveConfig> {
     public void forward(double power){
         move(DriveDirection.FORWARD, power);
     }
-
     public void reverse(double power){
         move(DriveDirection.REVERSE, power);
     }
     public void spinLeft(double power){
         move(DriveDirection.SPIN_LEFT, power);
     }
-    public void spinRight(double power){
-        move(DriveDirection.SPIN_RIGHT, power);
-    }
+    public void spinRight(double power){move(DriveDirection.SPIN_RIGHT, power);}
+    public void reverseRight(double power){move(DriveDirection.REVERSE_TURN_RIGHT, power);}
+    public void reverseLeft(double power){move(DriveDirection.REVERSE_TURN_LEFT, power);}
+    public void forwardRight(double power){move(DriveDirection.FORWARD_TURN_RIGHT, power);}
+    public void forwardLeft(double power){move(DriveDirection.FORWARD_TURN_LEFT, power);}
     public void stop(double power){
-        move(DriveDirection.STOP, 0);
+        move(DriveDirection.STOP, power);
     }
 }
