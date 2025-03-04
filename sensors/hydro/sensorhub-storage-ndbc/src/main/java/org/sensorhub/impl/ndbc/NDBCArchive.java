@@ -57,7 +57,7 @@ public class NDBCArchive extends AbstractModule<NDBCConfig> implements IObsStora
     Map<String, String[]> sensorOfferings = new LinkedHashMap<>();
 
 	@Override
-	public void start() throws SensorHubException
+	protected void doStart() throws SensorHubException
     {
 		loadFois();
 		initRecordStores();
@@ -65,7 +65,7 @@ public class NDBCArchive extends AbstractModule<NDBCConfig> implements IObsStora
     }
 	
 	@Override
-	public void stop() throws SensorHubException {
+	protected void doStop() throws SensorHubException {
 		// TODO Auto-generated method stub
 		
 	}

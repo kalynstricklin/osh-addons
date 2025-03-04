@@ -3,14 +3,12 @@ package org.sensorhub.test.sensor.trek1000;
 import static org.junit.Assert.*;
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
-import org.sensorhub.api.common.Event;
-import org.sensorhub.api.common.IEventListener;
-import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.sensor.ISensorDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.event.Event;
+import org.sensorhub.api.event.IEventListener;
+import org.sensorhub.api.data.IStreamingDataInterface;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.comm.rxtx.RxtxSerialCommProviderConfig;
 import org.sensorhub.impl.sensor.trek1000.Trek1000Config;
 import org.sensorhub.impl.sensor.trek1000.Trek1000Sensor;
@@ -49,7 +47,7 @@ public class TestTrek1000Rxtx implements IEventListener
 	@Test
 	public void testGetOutputDesc() throws Exception
 	{
-		for (ISensorDataInterface di: driver.getObservationOutputs().values())
+		for (IStreamingDataInterface di: driver.getObservationOutputs().values())
 		{
 			System.out.println();
 			DataComponent dataMsg = di.getRecordDescription();
@@ -76,9 +74,9 @@ public class TestTrek1000Rxtx implements IEventListener
         writer.setDataEncoding(new TextEncodingImpl(",", "\n"));
         writer.setOutput(System.out);
         
-        //ISensorDataInterface rangeOutput = driver.getObservationOutputs().get("ranges");
+        //IStreamingDataInterface rangeOutput = driver.getObservationOutputs().get("ranges");
         //rangeOutput.registerListener(this);
-        ISensorDataInterface locOutput = driver.getObservationOutputs().get("xyzLoc");
+        IStreamingDataInterface locOutput = driver.getObservationOutputs().get("xyzLoc");
         locOutput.registerListener(this);
         
         driver.start();
@@ -94,16 +92,17 @@ public class TestTrek1000Rxtx implements IEventListener
     
     
     @Override
-    public void handleEvent(Event<?> e)
+    public void handleEvent(Event e)
     {
-        assertTrue(e instanceof SensorDataEvent);
-        SensorDataEvent newDataEvent = (SensorDataEvent)e;
+        assertTrue(e instanceof DataEvent);
+        DataEvent dataEvent = (DataEvent)e;
         
         try
         {
-            writer.setDataComponents(newDataEvent.getRecordDescription());
+            IStreamingDataInterface output = driver.getObservationOutputs().get(dataEvent.getOutputName());
+            writer.setDataComponents(output.getRecordDescription().copy());
             writer.reset();
-            writer.write(newDataEvent.getRecords()[0]);
+            writer.write(dataEvent.getRecords()[0]);
             writer.flush();
             
             sampleCount++;

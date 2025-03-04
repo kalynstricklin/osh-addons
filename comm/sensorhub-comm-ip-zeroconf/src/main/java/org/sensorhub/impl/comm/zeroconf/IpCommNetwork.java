@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
  * provided by the jmDNS library.
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Feb 10, 2016
  */
 public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements ICommNetwork<IpNetworkConfig>
@@ -232,9 +232,9 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
 
 
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
         // use first interface by default if none is specified
         if (config.networkInterface == null)
@@ -319,7 +319,7 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
 
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
         // bind to selected network interface
         try
@@ -353,7 +353,7 @@ public class IpCommNetwork extends AbstractModule<IpNetworkConfig> implements IC
 
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
         try
         {

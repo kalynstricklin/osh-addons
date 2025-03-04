@@ -23,7 +23,7 @@ import org.sensorhub.algo.vecmath.Vect3d;
  * Abtract base for classes computing pointing orientation
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Aug 11, 2015
  */
 public abstract class AbstractGeoPointing implements IGeoPointing
@@ -49,15 +49,20 @@ public abstract class AbstractGeoPointing implements IGeoPointing
     
     protected Mat3d computeMatrix(Vect3d up, Vect3d forward, int forwardAxis, int upAxis, Mat3d rotMatrix)
     {
-        // deal with z down
-        boolean inverseZ = false;
+        // deal with reversed axes
+        if (forwardAxis < 0)
+        {
+            forward.scale(-1);
+            forwardAxis = -forwardAxis;
+        }
+        
         if (upAxis < 0)
         {
-            inverseZ = true;
+            up.scale(-1);
             upAxis = -upAxis;
         }
         
-        if ((forwardAxis == 1) && (upAxis == 3))
+        if (forwardAxis == 1 && upAxis == 3)
         {
             other.cross(up, forward);
             other.normalize();
@@ -65,7 +70,7 @@ public abstract class AbstractGeoPointing implements IGeoPointing
             rotMatrix.setCols(heading, other, up);
         }
 
-        else if ((forwardAxis == 1) && (upAxis == 2))
+        else if (forwardAxis == 1 && upAxis == 2)
         {
             other.cross(forward, up);
             other.normalize();
@@ -73,7 +78,7 @@ public abstract class AbstractGeoPointing implements IGeoPointing
             rotMatrix.setCols(heading, up, other);
         }
 
-        else if ((forwardAxis == 2) && (upAxis == 1))
+        else if (forwardAxis == 2 && upAxis == 1)
         {
             other.cross(up, forward);
             other.normalize();
@@ -81,7 +86,7 @@ public abstract class AbstractGeoPointing implements IGeoPointing
             rotMatrix.setCols(up, heading, other);
         }
 
-        else if ((forwardAxis == 2) && (upAxis == 3))
+        else if (forwardAxis == 2 && upAxis == 3)
         {
             other.cross(forward, up);
             other.normalize();
@@ -89,7 +94,7 @@ public abstract class AbstractGeoPointing implements IGeoPointing
             rotMatrix.setCols(other, heading, up);
         }
 
-        else if ((forwardAxis == 3) && (upAxis == 1))
+        else if (forwardAxis == 3 && upAxis == 1)
         {
             other.cross(forward, up);
             other.normalize();
@@ -97,19 +102,12 @@ public abstract class AbstractGeoPointing implements IGeoPointing
             rotMatrix.setCols(up, other, heading);
         }
 
-        else if ((forwardAxis == 3) && (upAxis == 2))
+        else if (forwardAxis == 3 && upAxis == 2)
         {
             other.cross(up, forward);
             other.normalize();
             heading.cross(other, up);
             rotMatrix.setCols(other, up, heading);
-        }
-        
-        if (inverseZ)
-        {
-            rotMatrix.m02 = -rotMatrix.m02;
-            rotMatrix.m12 = -rotMatrix.m12;
-            rotMatrix.m22 = -rotMatrix.m22;
         }
         
         return rotMatrix;
@@ -127,4 +125,7 @@ public abstract class AbstractGeoPointing implements IGeoPointing
         northDir.sub(northPole, ecefLoc);
         return northDir;
     }
+    
+    
+    public abstract void getRotationMatrixLocalToECEF(final Vect3d ecefLoc, final Vect3d forwardDir, int forwardAxis, int upAxis, Mat3d rotMatrix);
 }

@@ -9,8 +9,6 @@ import net.opengis.swe.v20.DataComponent;
 import org.sensorhub.api.comm.ICommProvider;
 import org.sensorhub.api.common.SensorHubException;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
-import org.sensorhub.impl.sensor.vaisala.VaisalaWeatherConfig;
-import org.sensorhub.impl.sensor.vaisala.VaisalaWeatherCompositeOutput;
 import org.vast.sensorML.SMLFactory;
 import org.vast.swe.SWEHelper;
 
@@ -18,6 +16,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+
 
 public class VaisalaWeatherSensor extends AbstractSensorModule<VaisalaWeatherConfig>
 { 
@@ -73,9 +72,9 @@ public class VaisalaWeatherSensor extends AbstractSensorModule<VaisalaWeatherCon
     
     
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
         // create data interfaces
         compOut = new VaisalaWeatherCompositeOutput(this);
@@ -101,7 +100,9 @@ public class VaisalaWeatherSensor extends AbstractSensorModule<VaisalaWeatherCon
             // we need to recreate comm provider here because it can be changed by UI
             if (config.commSettings == null)
                 throw new SensorHubException("No communication settings specified");
-            commProvider = config.commSettings.getProvider();
+            
+            var moduleReg = getParentHub().getModuleRegistry();
+            commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
             commProvider.start();
 
             // connect to comm data streams
@@ -499,7 +500,7 @@ public class VaisalaWeatherSensor extends AbstractSensorModule<VaisalaWeatherCon
     }
     
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
     	// start main measurement thread
       Thread t = new Thread(new Runnable()
@@ -522,7 +523,7 @@ public class VaisalaWeatherSensor extends AbstractSensorModule<VaisalaWeatherCon
     
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
     	started = false;
       

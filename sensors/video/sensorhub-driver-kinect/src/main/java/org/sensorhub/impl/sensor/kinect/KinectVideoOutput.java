@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 import org.openkinect.freenect.Device;
 import org.openkinect.freenect.FrameMode;
 import org.openkinect.freenect.VideoHandler;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.api.sensor.SensorException;
 import org.sensorhub.impl.sensor.videocam.VideoCamHelper;
 import org.vast.data.DataBlockMixed;
@@ -32,17 +32,20 @@ class KinectVideoOutput extends KinectOutputInterface {
 	
 	private static final String ERR_STR = new String("Error while initializing RGB video output");
 	
-	private static final String STR_NAME = new String("Kinect Camera (RGB)");
+	private static final String STR_NAME = new String("rgbCamera");
 			
 	protected static final int BYTES_PER_PIXEL = 3;
 
 	protected DataStream videoStream;
 
 	public KinectVideoOutput(KinectSensor parentSensor, Device kinectDevice) {
+        
+        super(STR_NAME, parentSensor, kinectDevice);
+    }
+
+	protected KinectVideoOutput(String name, KinectSensor parentSensor, Device kinectDevice) {
 		
-		super(parentSensor, kinectDevice);
-		
-		name = STR_NAME;
+		super(name, parentSensor, kinectDevice);
 	}
 
 	@Override
@@ -60,14 +63,14 @@ class KinectVideoOutput extends KinectOutputInterface {
 	@Override
 	public void init() throws SensorException {
 
-		device.setVideoFormat(getParentModule().getConfiguration().rgbFormat);
+		device.setVideoFormat(getParentProducer().getConfiguration().rgbFormat);
 
         try {
 
             VideoCamHelper videoCamHelper = new VideoCamHelper();
 
             videoStream = videoCamHelper.newVideoOutputRGB(getName(),
-            		getParentModule().getConfiguration().frameWidth, getParentModule().getConfiguration().frameHeight);
+            		getParentProducer().getConfiguration().frameWidth, getParentProducer().getConfiguration().frameHeight);
                                     
         } catch (Exception e) {
         	
@@ -85,7 +88,7 @@ class KinectVideoOutput extends KinectOutputInterface {
 				
 				DataBlock dataBlock = videoStream.getElementType().createDataBlock();
 				
-				byte[] channelData = new byte[BYTES_PER_PIXEL * getParentModule().getConfiguration().frameWidth * getParentModule().getConfiguration().frameHeight];
+				byte[] channelData = new byte[BYTES_PER_PIXEL * getParentProducer().getConfiguration().frameWidth * getParentProducer().getConfiguration().frameHeight];
 
 				getChannelData(frame, channelData);
 
@@ -99,7 +102,7 @@ class KinectVideoOutput extends KinectOutputInterface {
 		        
 		        latestRecordTime = System.currentTimeMillis();
 		        
-		        eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, KinectVideoOutput.this, dataBlock));      
+		        eventHandler.publish(new DataEvent(latestRecordTime, KinectVideoOutput.this, dataBlock));      
 		        
 				frame.position(0);
 			}
@@ -108,11 +111,11 @@ class KinectVideoOutput extends KinectOutputInterface {
 	
 	protected void getChannelData(ByteBuffer frame, byte[] channelData) {
 		
-		for (short y = 0; y < getParentModule().getConfiguration().frameHeight; ++y) {
+		for (short y = 0; y < getParentProducer().getConfiguration().frameHeight; ++y) {
 
-			for (short x = 0; x < getParentModule().getConfiguration().frameWidth; ++x) {
+			for (short x = 0; x < getParentProducer().getConfiguration().frameWidth; ++x) {
 			
-				int offset = BYTES_PER_PIXEL * (x + y * getParentModule().getConfiguration().frameWidth);
+				int offset = BYTES_PER_PIXEL * (x + y * getParentProducer().getConfiguration().frameWidth);
 
 				// Kinect reports in BGRA
 				byte r = frame.get(offset + 2);

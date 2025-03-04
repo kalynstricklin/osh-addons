@@ -2,18 +2,17 @@ package org.sensorhub.test.impl.sensor.twitter;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.sensorhub.api.common.Event;
-import org.sensorhub.api.common.IEventListener;
+import org.sensorhub.api.event.Event;
+import org.sensorhub.api.event.IEventListener;
+import org.sensorhub.api.data.IStreamingDataInterface;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.sensor.ISensorDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.twitter.TwitterConfig;
 import org.sensorhub.impl.sensor.twitter.TwitterSensor;
 import org.vast.sensorML.SMLUtils;
 import org.vast.swe.SWEUtils;
 import static org.junit.Assert.*;
 
-import java.io.IOException;
 import java.util.UUID;
 
 import org.junit.After;
@@ -45,7 +44,7 @@ public class TestTwitterDriver implements IEventListener
 	@Test
 	public void testGetOutputDesc() throws Exception
 	{
-		for (ISensorDataInterface di: driver.getObservationOutputs().values())
+		for (IStreamingDataInterface di: driver.getObservationOutputs().values())
 		{
 			System.out.println();
 			DataComponent dataMsg = di.getRecordDescription();
@@ -66,7 +65,7 @@ public class TestTwitterDriver implements IEventListener
 	{
 		System.out.println();
 
-		ISensorDataInterface twitterOutput = driver.getObservationOutputs().get("Twitter_Output");
+		IStreamingDataInterface twitterOutput = driver.getObservationOutputs().get("Twitter_Output");
 		twitterOutput.registerListener(this);
 
 		/*
@@ -87,23 +86,28 @@ public class TestTwitterDriver implements IEventListener
 	}
 	
 	@Override
-	public void handleEvent(Event<?> e)
+	public void handleEvent(Event e)
 	{
-		assertTrue(e instanceof SensorDataEvent);
-		SensorDataEvent newDataEvent = (SensorDataEvent)e;
+		assertTrue(e instanceof DataEvent);
+		DataEvent dataEvent = (DataEvent)e;
 		
-		System.out.println("\nNo. " + Integer.toString(sampleCount) + ": New data received from sensor " + newDataEvent.getSensorID());
+		System.out.println("\nNo. " + Integer.toString(sampleCount) + ": New data received from sensor " + dataEvent.getSystemUID());
 		sampleCount++;
 		
 		if (sampleCount >= 2) {
-			driver.stop();
+			try {
+			    driver.stop();
+			}
+            catch (SensorHubException e1) {
+                e1.printStackTrace();
+            }
 		}
 
 		synchronized (this) { this.notify(); }
 	}
 
     @After
-    public void cleanup()
+    public void cleanup() throws Exception
     {
 		driver.stop();
     }

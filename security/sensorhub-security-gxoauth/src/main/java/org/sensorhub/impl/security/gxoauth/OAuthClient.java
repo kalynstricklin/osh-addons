@@ -21,7 +21,6 @@ import org.eclipse.jetty.security.ServerAuthException;
 import org.eclipse.jetty.server.Authentication;
 import org.eclipse.jetty.server.Authentication.User;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.impl.SensorHub;
 import org.sensorhub.impl.module.AbstractModule;
 
 
@@ -30,7 +29,7 @@ import org.sensorhub.impl.module.AbstractModule;
  * OAuth Client module relying on Apache Oltu library
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Nov 29, 2016
  */
 public class OAuthClient extends AbstractModule<OAuthClientConfig> implements Authenticator
@@ -47,16 +46,16 @@ public class OAuthClient extends AbstractModule<OAuthClientConfig> implements Au
     
     
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
-        SensorHub.getInstance().getSecurityManager().registerAuthenticator(this);
+        getParentHub().getSecurityManager().registerAuthenticator(this);
     }
 
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
-        SensorHub.getInstance().getSecurityManager().registerAuthenticator(authenticator);
+        getParentHub().getSecurityManager().registerAuthenticator(authenticator);
         this.authenticator = null;
     }
 

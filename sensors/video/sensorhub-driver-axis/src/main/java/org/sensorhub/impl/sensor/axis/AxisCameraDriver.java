@@ -40,7 +40,7 @@ import org.vast.swe.SWEHelper;
  * protocol
  * </p>
  * 
- * @author Mike Botts <mike.botts@botts-inc.com>
+ * @author Mike Botts
  * @since October 30, 2014
  */
 public class AxisCameraDriver extends AbstractSensorModule < AxisCameraConfig > {
@@ -99,9 +99,9 @@ public class AxisCameraDriver extends AbstractSensorModule < AxisCameraConfig > 
 
 
     @Override
-    public void init() throws SensorHubException {
+    protected void doInit() throws SensorHubException {
         // reset internal state in case init() was already called
-        super.init();
+        super.doInit();
         mjpegVideoOutput = null;
         h264VideoOutput = null;
         ptzPosOutput = null;
@@ -217,7 +217,7 @@ public class AxisCameraDriver extends AbstractSensorModule < AxisCameraConfig > 
         // add H264 video output
         if (h264Supported && config.enableH264) {
             String outputName = videoOutName + videoOutNum++;
-            h264VideoOutput = new RTPVideoOutput < AxisCameraDriver > (this, outputName);
+            h264VideoOutput = new RTPVideoOutput<>(outputName, this);
             h264VideoOutput.init(config.video.resolution.getWidth(), config.video.resolution.getHeight());
             addOutput(h264VideoOutput, false);
         }
@@ -237,7 +237,7 @@ public class AxisCameraDriver extends AbstractSensorModule < AxisCameraConfig > 
 
 
     @Override
-    public void start() throws SensorHubException {
+    protected void doStart() throws SensorHubException {
         // wait for valid connection to camera
         connection.waitForConnection();
 
@@ -330,7 +330,7 @@ public class AxisCameraDriver extends AbstractSensorModule < AxisCameraConfig > 
 
 
     @Override
-    public void stop() {
+    protected void doStop() {
         if (connection != null)
             connection.cancel();
 

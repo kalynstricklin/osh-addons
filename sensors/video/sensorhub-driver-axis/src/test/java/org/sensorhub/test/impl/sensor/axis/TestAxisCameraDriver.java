@@ -22,11 +22,12 @@ import net.opengis.swe.v20.DataComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.sensorhub.api.common.Event;
-import org.sensorhub.api.common.IEventListener;
-import org.sensorhub.api.sensor.ISensorControlInterface;
-import org.sensorhub.api.sensor.ISensorDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.event.Event;
+import org.sensorhub.api.event.IEventListener;
+import org.sensorhub.api.data.IStreamingDataInterface;
+import org.sensorhub.api.command.CommandData;
+import org.sensorhub.api.command.IStreamingControlInterface;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.security.ClientAuth;
 import org.sensorhub.impl.sensor.axis.AxisCameraConfig;
 import org.sensorhub.impl.sensor.axis.AxisCameraDriver;
@@ -49,7 +50,7 @@ import static org.junit.Assert.*;
  * Copyright (c) 2014
  * </p>
  * 
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  */
 
 
@@ -97,7 +98,7 @@ public class TestAxisCameraDriver implements IEventListener
     @Test
     public void testGetOutputDesc() throws Exception
     {
-        for (ISensorDataInterface di: driver.getObservationOutputs().values())
+        for (IStreamingDataInterface di: driver.getObservationOutputs().values())
         {
             DataComponent dataMsg = di.getRecordDescription();
             new SWEUtils(SWEUtils.V2_0).writeComponent(System.out, dataMsg, false, true);
@@ -108,7 +109,7 @@ public class TestAxisCameraDriver implements IEventListener
     @Test
     public void testGetCommandDesc() throws Exception
     {
-        for (ISensorControlInterface ci: driver.getCommandInputs().values())
+        for (IStreamingControlInterface ci: driver.getCommandInputs().values())
         {
             DataComponent commandMsg = ci.getCommandDescription();
             new SWEUtils(SWEUtils.V2_0).writeComponent(System.out, commandMsg, false, true);
@@ -128,7 +129,7 @@ public class TestAxisCameraDriver implements IEventListener
     public void testVideoCapture() throws Exception
     {
         // register listener on data interface
-        ISensorDataInterface di = driver.getObservationOutputs().get("video1");
+        IStreamingDataInterface di = driver.getObservationOutputs().get("video1");
         assertTrue("No video output", di != null);
     	di.registerListener(this);
     	videoTestHelper.initWindow(di);
@@ -151,7 +152,7 @@ public class TestAxisCameraDriver implements IEventListener
     public void testPTZSettingsOutput() throws Exception
     {
         // register listener on data interface
-        ISensorDataInterface di = driver.getObservationOutputs().get("ptzOutput");
+        IStreamingDataInterface di = driver.getObservationOutputs().get("ptzOutput");
         assertTrue("No ptz output", di != null);
         di.registerListener(this);
                 
@@ -168,14 +169,14 @@ public class TestAxisCameraDriver implements IEventListener
     public void testSendPTZCommand() throws Exception
     {
         // register listeners
-    	ISensorDataInterface di = driver.getObservationOutputs().get("ptzOutput");
+    	IStreamingDataInterface di = driver.getObservationOutputs().get("ptzOutput");
         di.registerListener(this);
-        ISensorDataInterface di2 = driver.getObservationOutputs().get("video1");
+        IStreamingDataInterface di2 = driver.getObservationOutputs().get("video1");
         di2.registerListener(this);
         videoTestHelper.initWindow(di2);
         
         // get ptz control interface
-        ISensorControlInterface ci = driver.getCommandInputs().get("ptzControl");
+        IStreamingControlInterface ci = driver.getCommandInputs().get("ptzControl");
         DataComponent commandDesc = ci.getCommandDescription().copy();
         
         // start capture and send commands
@@ -243,7 +244,7 @@ public class TestAxisCameraDriver implements IEventListener
         			((DataChoiceImpl)commandDesc).setSelectedItem("rpan");
         			commandData = commandDesc.createDataBlock();
         			commandData.setFloatValue(1, 5.0f);
-        			ci.execCommand(commandData);
+        			ci.submitCommand(new CommandData(1, commandData));
         		}                               
         		this.wait();
         	}
@@ -278,20 +279,21 @@ public class TestAxisCameraDriver implements IEventListener
     
     
     @Override
-    public void handleEvent(Event<?> e)
+    public void handleEvent(Event e)
     {
-        assertTrue(e instanceof SensorDataEvent);
-        SensorDataEvent newDataEvent = (SensorDataEvent)e;
+        assertTrue(e instanceof DataEvent);
+        DataEvent dataEvent = (DataEvent)e;
         
-        if (newDataEvent.getSource().getClass().equals(AxisVideoOutput.class))
+        if (dataEvent.getSource().getClass().equals(AxisVideoOutput.class))
         {
-	        videoTestHelper.renderFrameJPEG(newDataEvent.getRecords()[0]);
+	        videoTestHelper.renderFrameJPEG(dataEvent.getRecords()[0]);
             frameCount++;
         }
-        else if (newDataEvent.getSource().getClass().equals(AxisPtzOutput.class))
+        else if (dataEvent.getSource().getClass().equals(AxisPtzOutput.class))
         {
-        	DataComponent ptzParams = newDataEvent.getRecordDescription().copy();
-        	ptzParams.setData(newDataEvent.getRecords()[0]);
+            IStreamingDataInterface output = driver.getObservationOutputs().get(dataEvent.getOutputName());
+            DataComponent ptzParams = output.getRecordDescription().copy();
+        	ptzParams.setData(dataEvent.getRecords()[0]);
         	System.out.println(ptzParams);
         }
         
@@ -300,11 +302,9 @@ public class TestAxisCameraDriver implements IEventListener
     
     
     @After
-    public void cleanup()
+    public void cleanup() throws Exception
     {
         videoTestHelper.dispose();
-        
-        if (driver != null)
-            driver.stop();
+        driver.stop();
     }
 }

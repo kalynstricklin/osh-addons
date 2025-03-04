@@ -14,8 +14,8 @@ Copyright (C) 2012-2015 Sensia Software LLC. All Rights Reserved.
 
 package org.sensorhub.impl.actuator.pca9685;
 
+import org.sensorhub.api.comm.ICommProvider;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.impl.comm.dio.JdkDioI2CCommProvider;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +27,14 @@ import org.slf4j.LoggerFactory;
  * 16-channels PWM daughter board using I2C commands.
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Aug 27, 2015
  */
 public class PwmServoActuators extends AbstractSensorModule<PwmServosConfig>
 {
     static final Logger log = LoggerFactory.getLogger(PwmServoActuators.class);
     
-    JdkDioI2CCommProvider i2cCommProvider;
+    ICommProvider<?> commProvider;
     volatile boolean started;
     
     
@@ -44,7 +44,7 @@ public class PwmServoActuators extends AbstractSensorModule<PwmServosConfig>
     
     
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
         super.init(config);
         
@@ -68,13 +68,13 @@ public class PwmServoActuators extends AbstractSensorModule<PwmServosConfig>
 
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
         if (started)
             return;
                 
         // init comm provider
-        if (i2cCommProvider == null)
+        if (commProvider == null)
         {
             // we need to recreate comm provider here because it can be changed by UI
             try
@@ -82,12 +82,13 @@ public class PwmServoActuators extends AbstractSensorModule<PwmServosConfig>
                 if (config.commSettings == null)
                     throw new SensorHubException("No communication settings specified");
                 
-                i2cCommProvider = (JdkDioI2CCommProvider)config.commSettings.getProvider();
-                i2cCommProvider.start();
+                var moduleReg = getParentHub().getModuleRegistry();
+                commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
+                commProvider.start();
             }
             catch (Exception e)
             {
-                i2cCommProvider = null;
+                commProvider = null;
                 throw e;
             }
         }
@@ -97,14 +98,14 @@ public class PwmServoActuators extends AbstractSensorModule<PwmServosConfig>
     
     
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
         started = false;
         
-        if (i2cCommProvider != null)
+        if (commProvider != null)
         {
-            i2cCommProvider.stop();
-            i2cCommProvider = null;
+            commProvider.stop();
+            commProvider = null;
         }
     }
     
@@ -119,6 +120,6 @@ public class PwmServoActuators extends AbstractSensorModule<PwmServosConfig>
     @Override
     public boolean isConnected()
     {
-        return (i2cCommProvider != null);
+        return (commProvider != null);
     }
 }

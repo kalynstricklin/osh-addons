@@ -82,9 +82,9 @@ public class OnvifCameraDriver extends AbstractSensorModule <OnvifCameraConfig>
     };
 
     @Override
-    public void init() throws SensorHubException {
+    protected void doInit() throws SensorHubException {
         // reset internal state in case init() was already called
-        super.init();
+        super.doInit();
         
         if (hostIp == null) {
 			throw new SensorHubException("No host IP address provided in config");
@@ -151,7 +151,7 @@ public class OnvifCameraDriver extends AbstractSensorModule <OnvifCameraConfig>
         // add H264 video output
         if (config.enableH264) {
 			String outputName = videoOutName + videoOutNum++;
-			h264VideoOutput = new RTPVideoOutput<OnvifCameraDriver>(this, outputName);
+			h264VideoOutput = new RTPVideoOutput<OnvifCameraDriver>(outputName, this);
 			h264VideoOutput.init(profile.getVideoSourceConfiguration().getBounds().getWidth(), 
 								profile.getVideoSourceConfiguration().getBounds().getHeight());
 			// TODO: check the difference between the above and what's below
@@ -180,7 +180,7 @@ public class OnvifCameraDriver extends AbstractSensorModule <OnvifCameraConfig>
     }
 
     @Override
-    public void start() throws SensorHubException {
+    protected void doStart() throws SensorHubException {
 		// Validate connection to camera
 		if (camera == null)
 			throw new SensorHubException("Exception occured when connecting to camera");
@@ -222,7 +222,7 @@ public class OnvifCameraDriver extends AbstractSensorModule <OnvifCameraConfig>
     }
 
     @Override
-    public void stop() {}
+    protected void doStop() {}
 
     @Override
     public void cleanup() {}

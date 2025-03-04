@@ -17,22 +17,21 @@ package org.sensorhub.impl.sensor.fakeweather;
 
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.sensorhub.impl.sensor.fakeweather.FakeWeatherOutput;
-import org.sensorhub.impl.sensor.fakeweather.FakeWeatherSensor;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import net.opengis.swe.v20.DataBlock;
 import net.opengis.swe.v20.DataComponent;
 import net.opengis.swe.v20.DataEncoding;
-import net.opengis.swe.v20.Quantity;
+import org.vast.swe.SWEConstants;
 import org.vast.swe.SWEHelper;
 
 
 public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
 {
-    DataComponent weatherData;
-    DataEncoding weatherEncoding;
+    DataComponent dataStruct;
+    DataEncoding dataEncoding;
     Timer timer;
     Random rand = new Random();
     
@@ -51,14 +50,7 @@ public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
     
     public FakeWeatherOutput(FakeWeatherSensor parentSensor)
     {
-        super(parentSensor);
-    }
-
-
-    @Override
-    public String getName()
-    {
-        return "weather";
+        super("weather", parentSensor);
     }
 
 
@@ -66,26 +58,40 @@ public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
     {
         SWEHelper fac = new SWEHelper();
         
-        // build SWE Common record structure
-    	weatherData = fac.newDataRecord(5);
-        weatherData.setName(getName());
-        weatherData.setDefinition("http://sensorml.com/ont/swe/property/Weather");
-        weatherData.setDescription("Weather measurements");
-        
-        // add time, temperature, pressure, wind speed and wind direction fields
-        weatherData.addComponent("time", fac.newTimeStampIsoUTC());
-        weatherData.addComponent("temperature", fac.newQuantity(SWEHelper.getPropertyUri("AirTemperature"), "Air Temperature", null, "Cel"));
-        weatherData.addComponent("pressure", fac.newQuantity(SWEHelper.getPropertyUri("AtmosphericPressure"), "Air Pressure", null, "hPa"));
-        weatherData.addComponent("windSpeed", fac.newQuantity(SWEHelper.getPropertyUri("WindSpeed"), "Wind Speed", null, "m/s"));
-        
-        // for wind direction, we also specify a reference frame
-        Quantity q = fac.newQuantity(SWEHelper.getPropertyUri("WindDirection"), "Wind Direction", null, "deg");
-        q.setReferenceFrame("http://sensorml.com/ont/swe/property/NED");
-        q.setAxisID("z");
-        weatherData.addComponent("windDirection", q);
+        // create output data structure
+        dataStruct = fac.createRecord()
+            .name(getName())
+            .definition("urn:osh:data:weather")
+            .description("Weather measurements")
+            
+            .addField("time", fac.createTime()
+                .asSamplingTimeIsoUTC())
+            
+            .addField("temperature", fac.createQuantity()
+                .definition(SWEHelper.getCfUri("air_temperature"))
+                .label("Air Temperature")
+                .uomCode("Cel"))
+            
+            .addField("pressure", fac.createQuantity()
+                .definition(SWEHelper.getCfUri("air_pressure"))
+                .label("Atmospheric Pressure")
+                .uomCode("hPa"))
+            
+            .addField("windSpeed", fac.createQuantity()
+                .definition(SWEHelper.getCfUri("wind_speed"))
+                .label("Wind Speed")
+                .uomCode("m/s"))
+            
+            .addField("windDirection", fac.createQuantity()
+                .definition(SWEHelper.getCfUri("wind_from_direction"))
+                .label("Wind Direction")
+                .uomCode("deg")
+                .refFrame(SWEConstants.REF_FRAME_NED, "z"))
+            
+            .build();
      
         // also generate encoding definition
-        weatherEncoding = fac.newTextEncoding(",", "\n");
+        dataEncoding = fac.newTextEncoding(",", "\n");
     }
 
     
@@ -113,7 +119,7 @@ public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
         parentSensor.getLogger().trace(String.format("temp=%5.2f, press=%4.2f, wind speed=%5.2f, wind dir=%3.1f", temp, press, windSpeed, windDir));
         
         // build and publish datablock
-        DataBlock dataBlock = weatherData.createDataBlock();
+        DataBlock dataBlock = dataStruct.createDataBlock();
         dataBlock.setDoubleValue(0, time);
         dataBlock.setDoubleValue(1, temp);
         dataBlock.setDoubleValue(2, press);
@@ -123,7 +129,7 @@ public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
         // update latest record and send event
         latestRecord = dataBlock;
         latestRecordTime = System.currentTimeMillis();
-        eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, FakeWeatherOutput.this, dataBlock));        
+        eventHandler.publish(new DataEvent(latestRecordTime, FakeWeatherOutput.this, dataBlock));        
     }
     
     
@@ -151,7 +157,6 @@ public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
     }
 
 
-    @Override
     protected void stop()
     {
         if (timer != null)
@@ -173,13 +178,13 @@ public class FakeWeatherOutput extends AbstractSensorOutput<FakeWeatherSensor>
     @Override
     public DataComponent getRecordDescription()
     {
-        return weatherData;
+        return dataStruct;
     }
 
 
     @Override
     public DataEncoding getRecommendedEncoding()
     {
-        return weatherEncoding;
+        return dataEncoding;
     }
 }

@@ -25,9 +25,9 @@ public class GammaSensor extends AbstractSensorModule<GammaConfig>
     
     
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
         // init comm provider
         if (commProvider == null)
@@ -38,7 +38,8 @@ public class GammaSensor extends AbstractSensorModule<GammaConfig>
                 if (config.commSettings == null)
                     throw new SensorHubException("No communication settings specified");
                 
-                commProvider = config.commSettings.getProvider();
+                var moduleReg = getParentHub().getModuleRegistry();
+                commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
                 commProvider.start();
             }
             catch (Exception e)
@@ -120,7 +121,7 @@ public class GammaSensor extends AbstractSensorModule<GammaConfig>
     }
     
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
     	if (started)
             return;
@@ -145,7 +146,7 @@ public class GammaSensor extends AbstractSensorModule<GammaConfig>
     
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
     	started = false;
         

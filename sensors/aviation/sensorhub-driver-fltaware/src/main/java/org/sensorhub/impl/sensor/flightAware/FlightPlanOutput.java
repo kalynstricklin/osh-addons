@@ -14,14 +14,10 @@ Copyright (C) 2018 Delta Air Lines, Inc. All Rights Reserved.
 
 package org.sensorhub.impl.sensor.flightAware;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-
-import org.sensorhub.api.data.IMultiSourceDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.sensorhub.impl.sensor.flightAware.DecodeFlightRouteResponse.Waypoint;
 import org.vast.data.AbstractDataBlock;
@@ -29,6 +25,7 @@ import org.vast.data.DataBlockMixed;
 import org.vast.swe.SWEConstants;
 import org.vast.swe.SWEHelper;
 import org.vast.swe.helper.GeoPosHelper;
+import com.google.common.cache.CacheBuilder;
 import net.opengis.swe.v20.Count;
 import net.opengis.swe.v20.DataArray;
 import net.opengis.swe.v20.DataBlock;
@@ -45,9 +42,11 @@ import net.opengis.swe.v20.DataType;
  * @author Tony Cook
  * @since Sep 5, 2017
  */
-public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> implements IMultiSourceDataInterface  
+public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver>
 {
     static final String DEF_FLIGHTPLAN_REC = SWEHelper.getPropertyUri("aero/FlightPlan");
+    static final String DEF_FLIGH_ID = SWEHelper.getPropertyUri("aero/FlightID");
+    static final String DEF_AIRCRAFT_TYPE = SWEHelper.getPropertyUri("aero/AircraftType/ICAO");
     static final String DEF_AIRPORT_CODE = SWEHelper.getPropertyUri("aero/AirportCode/ICAO");
     static final String DEF_WAYPOINT = SWEHelper.getPropertyUri("aero/Waypoint");
     static final String DEF_WAYPOINT_TYPE = SWEHelper.getPropertyUri("aero/WaypointType");
@@ -56,29 +55,34 @@ public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> im
 
     private static final int AVERAGE_SAMPLING_PERIOD = (int)TimeUnit.MINUTES.toMillis(15); 
 
-	DataComponent dataStruct;
+    DataComponent dataStruct;
     DataArray waypointArray;
-	DataEncoding encoding;	
-	Map<String, Long> latestUpdateTimes = new ConcurrentHashMap<>();
-	Map<String, DataBlock> latestRecords = new ConcurrentHashMap<>();
+    DataEncoding encoding;
+    
+    Map<String, Long> latestUpdateTimes = new ConcurrentHashMap<>();
+    Map<String, DataBlock> latestRecords = CacheBuilder.newBuilder()
+            .concurrencyLevel(4)
+            .expireAfterAccess(24, TimeUnit.HOURS)
+            .<String, DataBlock>build().asMap();
 
 
-	public FlightPlanOutput(FlightAwareDriver parentSensor) 
-	{
-		super("flightPlan", parentSensor);
-	}
+    public FlightPlanOutput(FlightAwareDriver parentSensor) 
+    {
+        super("flightPlan", parentSensor);
+    }
 
-	protected void init()
-	{
-		GeoPosHelper fac = new GeoPosHelper();
+    protected void init()
+    {
+        GeoPosHelper fac = new GeoPosHelper();
 
-		// SWE Common data structure
-		this.dataStruct = fac.newDataRecord();
-		dataStruct.setName(getName());
-		dataStruct.setDefinition(DEF_FLIGHTPLAN_REC);
+        // SWE Common data structure
+        this.dataStruct = fac.newDataRecord();
+        dataStruct.setName(getName());
+        dataStruct.setDefinition(DEF_FLIGHTPLAN_REC);
         dataStruct.addComponent("time", fac.newTimeIsoUTC(SWEConstants.DEF_SAMPLING_TIME, "Issue Time", null));
-        dataStruct.addComponent("flightId", fac.newText(ENTITY_ID_URI, "Flight ID", null));
+        dataStruct.addComponent("flightId", fac.newText(DEF_FLIGH_ID, "Flight ID", null));
         dataStruct.addComponent("flightNumber", fac.newText(DEF_FLIGHT_NUM, "Flight Number", null));
+        dataStruct.addComponent("aircraftType", fac.newCategory(DEF_AIRCRAFT_TYPE, "Aircraft Type", "Model of aircraft operated on this flight", null));
         dataStruct.addComponent("srcAirport", fac.newText(DEF_AIRPORT_CODE, "Departure Airport", "ICAO identification code of departure airport"));
         dataStruct.addComponent("destAirport", fac.newText(DEF_AIRPORT_CODE, "Arrival Airport", "ICAO identification code of arrival airport"));
         dataStruct.addComponent("altAirports", fac.newText(DEF_AIRPORT_CODE, "Alternate Airports", "ICAO identification codes of alternate airports"));
@@ -103,12 +107,12 @@ public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> im
         waypointArray.setElementCount(numPoints);
         dataStruct.addComponent("waypoints", waypointArray);
 
-		// default encoding is text
-		encoding = fac.newTextEncoding(",", "\n");
-	}
+        // default encoding is text
+        encoding = fac.newTextEncoding(",", "\n");
+    }
 
-	public synchronized void sendFlightPlan(String oshFlightId, FlightObject fltPlan)
-	{
+    public synchronized void sendFlightPlan(String oshFlightId, FlightObject fltPlan)
+    {
         long msgTime = System.currentTimeMillis();
         
         // renew datablock
@@ -121,6 +125,7 @@ public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> im
         dataBlk.setDoubleValue(i++, fltPlan.getMessageTime());
         dataBlk.setStringValue(i++, oshFlightId);
         dataBlk.setStringValue(i++, fltPlan.ident);
+        dataBlk.setStringValue(i++, fltPlan.aircrafttype);
         dataBlk.setStringValue(i++, fltPlan.orig);
         dataBlk.setStringValue(i++, fltPlan.dest);
         dataBlk.setStringValue(i++, null);
@@ -146,7 +151,11 @@ public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> im
         latestRecord = dataBlk;
         latestRecordTime = msgTime;
         latestRecords.put(oshFlightId, dataBlk);
-        eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, oshFlightId, this, dataBlk));
+
+        eventHandler.publish(new DataEvent(
+            latestRecordTime, this,
+            FlightAwareDriver.FLIGHT_UID_PREFIX + oshFlightId,
+            dataBlk));
 	}
 	
 	
@@ -174,17 +183,18 @@ public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> im
 	}
 
 
-	public double getAverageSamplingPeriod()
-	{
-		return AVERAGE_SAMPLING_PERIOD;
-	}
+
+    public double getAverageSamplingPeriod()
+    {
+        return AVERAGE_SAMPLING_PERIOD;
+    }
 
 
-	@Override 
-	public DataComponent getRecordDescription()
-	{
-		return dataStruct;
-	}
+    @Override 
+    public DataComponent getRecordDescription()
+    {
+        return dataStruct;
+    }
 
 
 	@Override
@@ -192,36 +202,5 @@ public class FlightPlanOutput extends AbstractSensorOutput<FlightAwareDriver> im
 	{
 		return encoding;
 	}
-
-
-	@Override
-	public Collection<String> getEntityIDs()
-	{
-		return parentSensor.getEntityIDs();
-	}
-
-
-	@Override
-	public Map<String, DataBlock> getLatestRecords()
-	{
-		return Collections.unmodifiableMap(latestRecords);
-	}
-
-
-	@Override
-	public DataBlock getLatestRecord(String entityId) {
-		//		for(Map.Entry<String, DataBlock> dbe: latestRecords.entrySet()) {
-		//			String key = dbe.getKey();
-		//			DataBlock val = dbe.getValue();
-		//			System.err.println(key + " : " + val);
-		//		}
-		int lastColonIdx = entityId.lastIndexOf(':');
-		if(lastColonIdx == -1) {
-			return null;
-		}
-		String flightId = entityId.substring(lastColonIdx + 1);
-		return latestRecords.get(flightId);
-	}
-
 
 }

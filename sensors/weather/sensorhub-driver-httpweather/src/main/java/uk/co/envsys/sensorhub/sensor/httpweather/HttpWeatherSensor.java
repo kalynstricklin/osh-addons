@@ -22,8 +22,8 @@ public class HttpWeatherSensor extends AbstractSensorModule<HttpWeatherConfig> {
 	
 	public HttpWeatherSensor() {}
 	
-	public void init() throws SensorHubException {
-		super.init();
+	protected void doInit() throws SensorHubException {
+		super.doInit();
 		dataInterface = new HttpWeatherOutput(this);
 		addOutput(dataInterface, false);
 		dataInterface.init();
@@ -71,28 +71,25 @@ public class HttpWeatherSensor extends AbstractSensorModule<HttpWeatherConfig> {
 	}
 
 	@Override
-	public void start() throws SensorHubException {
-		HttpServer instance = HttpServer.getInstance();
-		if(instance == null) {
+	protected void doStart() throws SensorHubException {
+		var httpServer = getParentHub().getModuleRegistry().getModuleByType(HttpServer.class);
+		if (httpServer == null) {
 			// NO RUNNING SERVER FOUND - probably running unit tests... start one?
-			instance = new HttpServer();
-			instance.init(new HttpServerConfig());
-			instance.start();
+		    httpServer = new HttpServer();
+		    httpServer.init(new HttpServerConfig());
+		    httpServer.start();
 		}
 		
-		instance.deployServlet(server, "/httpweather/" + config.urlBase + "/*");
+		httpServer.deployServlet(server, "/httpweather/" + config.urlBase + "/*");
 		serverRunning = true;
 	}
 
 	@Override
-	public void stop() throws SensorHubException {
-		HttpServer.getInstance().undeployServlet(server);
+	protected void doStop() throws SensorHubException {
+	    var httpServer = getParentHub().getModuleRegistry().getModuleByType(HttpServer.class);
+	    if (httpServer != null)
+	        httpServer.undeployServlet(server);
 		serverRunning = false;
-	}
-
-	@Override
-	public void cleanup() throws SensorHubException {
-		HttpServer.getInstance().undeployServlet(server);		
 	}
 
 }

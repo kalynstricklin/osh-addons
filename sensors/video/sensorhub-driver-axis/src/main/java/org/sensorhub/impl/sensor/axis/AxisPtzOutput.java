@@ -30,7 +30,7 @@ import net.opengis.swe.v20.DataComponent;
 import net.opengis.swe.v20.DataEncoding;
 import net.opengis.swe.v20.TextEncoding;
 import org.sensorhub.api.sensor.SensorException;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.sensorhub.impl.sensor.videocam.VideoCamHelper;
 import org.vast.data.SWEFactory;
@@ -44,7 +44,7 @@ import org.vast.data.SWEFactory;
  * </p>
  *
  * 
- * @author Mike Botts <mike.botts@botts-inc.com>
+ * @author Mike Botts
  * @since October 30, 2014
  */
 
@@ -64,7 +64,7 @@ public class AxisPtzOutput extends AbstractSensorOutput<AxisCameraDriver>
 
     public AxisPtzOutput(AxisCameraDriver driver)
     {
-        super(driver);
+        super("ptzOutput", driver);
         
         try {
 
@@ -75,13 +75,6 @@ public class AxisPtzOutput extends AbstractSensorOutput<AxisCameraDriver>
            
             e.printStackTrace();
         }
-    }
-
-
-    @Override
-    public String getName()
-    {
-        return "ptzOutput";
     }
   
     
@@ -200,7 +193,7 @@ public class AxisPtzOutput extends AbstractSensorOutput<AxisCameraDriver>
                         if (lines == totalReads) {
                             latestRecord = dataStruct.getData();
                             latestRecordTime = System.currentTimeMillis();
-                            eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, AxisPtzOutput.this, latestRecord));
+                            eventHandler.publish(new DataEvent(latestRecordTime, AxisPtzOutput.this, latestRecord));
                         } else {
                             throw new SensorException("Invalid sensor data from AXIS camera. AXIS url: " + ptzURL.toString());
                         }

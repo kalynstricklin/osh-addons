@@ -14,25 +14,11 @@ Copyright (C) 2012-2015 Botts Innovative Research, Inc. All Rights Reserved.
 
 package org.sensorhub.impl.sensor.avl;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import net.opengis.gml.v32.AbstractFeature;
-import net.opengis.sensorml.v20.AbstractProcess;
-import net.opengis.sensorml.v20.PhysicalSystem;
 import org.sensorhub.api.comm.ICommProvider;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.data.FoiEvent;
-import org.sensorhub.api.data.IMultiSourceDataProducer;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.vast.sensorML.SMLHelper;
-
+import org.vast.ogc.om.MovingFeature;
+import org.vast.util.Asserts;
 
 
 /**
@@ -41,17 +27,12 @@ import org.vast.sensorML.SMLHelper;
  * to the Intergraph 911 System data format, although this should be able to be generalized.
  * </p>
  *
- * @author Mike Botts <mike.botts@botts-inc.com>
+ * @author Mike Botts
  * @since September 10, 2015
  */
-public class AVLDriver extends AbstractSensorModule<AVLConfig> implements IMultiSourceDataProducer
+public class AVLDriver extends AbstractSensorModule<AVLConfig>
 {
-	static final Logger log = LoggerFactory.getLogger(AVLDriver.class);
-
-	static final String SENSOR_UID_PREFIX = "urn:osh:sensor:avl:";
-    
-    Set<String> foiIDs;
-    Map<String, AbstractFeature> vehicleFois;
+	static final String UID_PREFIX = "urn:osh:sensor:avl:";
     	
 	ICommProvider<?> commProvider;
     AVLOutput dataInterface;
@@ -63,17 +44,16 @@ public class AVLDriver extends AbstractSensorModule<AVLConfig> implements IMulti
     
     
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
+        
+        Asserts.checkNotNullOrEmpty(config.agencyName, "agencyName");
+        Asserts.checkNotNullOrEmpty(config.fleetID, "fleetID");
         
         // generate IDs
-        generateUniqueID(SENSOR_UID_PREFIX, config.fleetID);
-        generateXmlID("AVL_", config.fleetID);            
-        
-        // create foi maps
-        this.foiIDs = new LinkedHashSet<String>();
-        this.vehicleFois = new LinkedHashMap<String, AbstractFeature>();
+        generateUniqueID(UID_PREFIX, config.fleetID);
+        generateXmlID("AVL_", config.fleetID);
         
         // init main data interface
         dataInterface = new AVLOutput(this);
@@ -94,7 +74,7 @@ public class AVLDriver extends AbstractSensorModule<AVLConfig> implements IMulti
 	
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
         // init comm provider
         if (commProvider == null)
@@ -105,8 +85,11 @@ public class AVLDriver extends AbstractSensorModule<AVLConfig> implements IMulti
                     throw new SensorHubException("No communication settings specified");
                 
                 // start comm provider
-                commProvider = config.commSettings.getProvider();
+                var moduleReg = getParentHub().getModuleRegistry();
+                commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
                 commProvider.start();
+                if (commProvider.getCurrentError() != null)
+                    throw (SensorHubException)commProvider.getCurrentError();
             }
             catch (Exception e)
             {
@@ -121,7 +104,7 @@ public class AVLDriver extends AbstractSensorModule<AVLConfig> implements IMulti
     
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
         // stop comm provider
         if (commProvider != null)
@@ -150,99 +133,26 @@ public class AVLDriver extends AbstractSensorModule<AVLConfig> implements IMulti
     }
     
     
-    void addFoi(double recordTime, String vehicleID)
+    String addFoi(double recordTime, String vehicleID)
     {
-        if (!vehicleFois.containsKey(vehicleID))
-        {
-            String name = vehicleID;
-            String uid = SENSOR_UID_PREFIX + config.fleetID + ':' + vehicleID;
-            String description = "Vehicle " + vehicleID + " from " + config.agencyName;
-            
-            SMLHelper smlFac = new SMLHelper();
-            
-            // generate small SensorML for FOI (in this case the system is the FOI)
-            PhysicalSystem foi = smlFac.newPhysicalSystem();
-            foi.setId(vehicleID);
-            foi.setUniqueIdentifier(uid);
-            foi.setName(name);
-            foi.setDescription(description);
-            /*ContactList contacts = smlFac.newContactList();
-            CIResponsibleParty contact = smlFac.newResponsibleParty();
-            contact.setOrganisationName(config.agencyName);
-            contact.setRole(new CodeListValueImpl("operator"));
-            contacts.addContact(contact);
-            foi.addContacts(contacts);*/
-            
-            // update maps
-            foiIDs.add(uid);
-            vehicleFois.put(vehicleID, foi);
-            
-            // send event
-            long now = System.currentTimeMillis();
-            eventHandler.publishEvent(new FoiEvent(now, vehicleID, this, foi, recordTime));
-            
-            log.debug("New vehicle added as FOI: {}", uid);
-        }
-    }
-
-
-    @Override
-    public Collection<String> getEntityIDs()
-    {
-        return Collections.unmodifiableSet(vehicleFois.keySet());
-    }
-    
-    
-    @Override
-    public AbstractFeature getCurrentFeatureOfInterest()
-    {
-        return null;
-    }
-
-
-    @Override
-    public AbstractProcess getCurrentDescription(String entityID)
-    {
-        return null;
-    }
-
-
-    @Override
-    public double getLastDescriptionUpdate(String entityID)
-    {
-        return 0;
-    }
-
-
-    @Override
-    public AbstractFeature getCurrentFeatureOfInterest(String entityID)
-    {
-        return vehicleFois.get(entityID);
-    }
-
-
-    @Override
-    public Collection<? extends AbstractFeature> getFeaturesOfInterest()
-    {
-        return Collections.unmodifiableCollection(vehicleFois.values());
-    }
-    
-    
-    @Override
-    public Collection<String> getFeaturesOfInterestIDs()
-    {
-        return Collections.unmodifiableSet(foiIDs);
-    }
-
-
-    @Override
-    public Collection<String> getEntitiesWithFoi(String foiID)
-    {
-        if (!foiIDs.contains(foiID))
-            return Collections.EMPTY_SET;
+        String foiUID = UID_PREFIX + config.fleetID + ':' + vehicleID;
         
-        String entityID = foiID.substring(foiID.lastIndexOf(':')+1);
-        return Arrays.asList(entityID);
+        if (!foiMap.containsKey(foiUID))
+        {
+            // generate small SensorML for FOI (in this case the system is the FOI)
+            MovingFeature foi = new MovingFeature();
+            foi.setId(vehicleID);
+            foi.setUniqueIdentifier(foiUID);
+            foi.setName(vehicleID);
+            foi.setDescription("Vehicle " + vehicleID + " from " + config.agencyName);
+            
+            // register it
+            addFoi(foi);
+            
+            getLogger().debug("New vehicle added as FOI: {}", foiUID);
+        }
+        
+        return foiUID;
     }
 
 }

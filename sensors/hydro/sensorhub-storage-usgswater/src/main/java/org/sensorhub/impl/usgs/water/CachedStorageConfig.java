@@ -15,16 +15,16 @@ Copyright (C) 2012-2017 Sensia Software LLC. All Rights Reserved.
 package org.sensorhub.impl.usgs.water;
 
 import org.sensorhub.api.config.DisplayInfo;
-import org.sensorhub.api.persistence.StorageConfig;
+import org.sensorhub.api.database.DatabaseConfig;
 
 
 public class CachedStorageConfig extends USGSWaterDataConfig
 {
     
     @DisplayInfo(label="Cache Config", desc="Configuration of underlying storage used for caching USGS database")
-    public StorageConfig cacheConfig;
+    public DatabaseConfig cacheConfig;
     
     
     @DisplayInfo(desc="Data matching this filter will be preloaded into storage")
-    public DataFilter preloadFilter = new DataFilter();
+    public USGSDataFilter preloadFilter = new USGSDataFilter();
 }

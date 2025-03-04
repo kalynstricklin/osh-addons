@@ -18,7 +18,7 @@ import net.opengis.swe.v20.DataBlock;
 import net.opengis.swe.v20.DataComponent;
 import net.opengis.swe.v20.DataEncoding;
 import net.opengis.swe.v20.DataRecord;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.vast.swe.SWEHelper;
 
@@ -47,14 +47,7 @@ public class SimCBRNOutputID extends AbstractSensorOutput<SimCBRNSensor>
 
 	public SimCBRNOutputID(SimCBRNSensor parentSensor)
 	{
-		super(parentSensor);
-	}
-
-
-	@Override
-	public String getName()
-	{
-		return "ID";
+		super("poc", parentSensor);
 	}
 
 
@@ -106,7 +99,7 @@ public class SimCBRNOutputID extends AbstractSensorOutput<SimCBRNSensor>
 		//this method call is required to push data
 		latestRecord = dataBlock;
 		latestRecordTime = System.currentTimeMillis();
-		eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, SimCBRNOutputID.this, dataBlock));
+		eventHandler.publish(new DataEvent(latestRecordTime, SimCBRNOutputID.this, dataBlock));
 	}
 
 
@@ -128,7 +121,6 @@ public class SimCBRNOutputID extends AbstractSensorOutput<SimCBRNSensor>
 	}
 
 
-	@Override
 	protected void stop()
 	{
 		if (timer != null)

@@ -4,7 +4,6 @@ version = '1.0.0'
 
 dependencies {
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
-  implementation 'org.vast.opengis:ogc-services-sps:' + oshCoreVersion
   api project(':sensorhub-process-vecmath')
 }
 
@@ -13,10 +12,10 @@ test {
 }
 
 // add info to OSGi manifest
-jar {
+osgi {
   manifest {
-    attributes 'Bundle-Vendor': 'Sensia Software LLC'
-    attributes 'Bundle-Activator': 'org.sensorhub.process.geoloc.Activator'
+    attributes('Bundle-Vendor': 'Sensia Software LLC')
+    attributes('Bundle-Activator': 'org.sensorhub.process.geoloc.Activator')
   }
 }
 

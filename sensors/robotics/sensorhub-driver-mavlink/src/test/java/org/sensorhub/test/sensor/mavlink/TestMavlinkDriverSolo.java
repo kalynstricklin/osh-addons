@@ -22,11 +22,10 @@ import net.opengis.swe.v20.DataComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.sensorhub.api.common.Event;
-import org.sensorhub.api.common.IEventListener;
-import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.sensor.ISensorDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.event.Event;
+import org.sensorhub.api.event.IEventListener;
+import org.sensorhub.api.data.IStreamingDataInterface;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.comm.UDPCommProviderConfig;
 import org.sensorhub.impl.sensor.mavlink.MavlinkConfig;
 import org.sensorhub.impl.sensor.mavlink.MavlinkConfig.MsgTypes;
@@ -70,7 +69,7 @@ public class TestMavlinkDriverSolo implements IEventListener
     @Test
     public void testGetOutputDesc() throws Exception
     {
-        for (ISensorDataInterface di: driver.getObservationOutputs().values())
+        for (IStreamingDataInterface di: driver.getObservationOutputs().values())
         {
             System.out.println();
             DataComponent dataMsg = di.getRecordDescription();
@@ -97,13 +96,13 @@ public class TestMavlinkDriverSolo implements IEventListener
         writer.setDataEncoding(new TextEncodingImpl(",", "\n"));
         writer.setOutput(System.out);
         
-        ISensorDataInterface attOutput = driver.getObservationOutputs().get("platformAtt");
+        IStreamingDataInterface attOutput = driver.getObservationOutputs().get("platformAtt");
         attOutput.registerListener(this);
         
-        ISensorDataInterface locOutput = driver.getObservationOutputs().get("platformLoc");
+        IStreamingDataInterface locOutput = driver.getObservationOutputs().get("platformLoc");
         locOutput.registerListener(this);
         
-        ISensorDataInterface gimbalOutput = driver.getObservationOutputs().get("gimbalAtt");
+        IStreamingDataInterface gimbalOutput = driver.getObservationOutputs().get("gimbalAtt");
         gimbalOutput.registerListener(this);
         
         driver.start();
@@ -119,10 +118,10 @@ public class TestMavlinkDriverSolo implements IEventListener
     
     
     @Override
-    public void handleEvent(Event<?> e)
+    public void handleEvent(Event e)
     {
-        assertTrue(e instanceof SensorDataEvent);
-        SensorDataEvent newDataEvent = (SensorDataEvent)e;
+        assertTrue(e instanceof DataEvent);
+        DataEvent newDataEvent = (DataEvent)e;
         
         try
         {
@@ -144,15 +143,8 @@ public class TestMavlinkDriverSolo implements IEventListener
     
     
     @After
-    public void cleanup()
+    public void cleanup() throws Exception
     {
-        try
-        {
-            driver.stop();
-        }
-        catch (SensorHubException e)
-        {
-            e.printStackTrace();
-        }
+        driver.stop();
     }
 }

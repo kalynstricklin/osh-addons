@@ -16,13 +16,8 @@ package org.sensorhub.impl.sensor.navDb;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
-import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.data.IMultiSourceDataInterface;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.vast.swe.SWEHelper;
 
@@ -40,95 +35,50 @@ import net.opengis.swe.v20.Text;
  * @author Tony Cook
  *
  */
-public class AirportOutput extends AbstractSensorOutput<NavDriver> implements IMultiSourceDataInterface 
+public class AirportOutput extends AbstractSensorOutput<NavDriver>
 {
-	private static final int AVERAGE_SAMPLING_PERIOD = 1;
+    private static final int AVERAGE_SAMPLING_PERIOD = 1;
 
 	DataRecord navStruct;
-	DataEncoding encoding;	
-	Map<String, DataBlock> records = new TreeMap<>();  // key is navDbEntry uid
+	DataEncoding encoding;
 
+	
 	public AirportOutput(NavDriver parentSensor) throws IOException
 	{
-		super(parentSensor);
+		super("airports", parentSensor);
 	}
+    
 
+    protected void init()
+    {
+        SWEHelper fac = new SWEHelper();
 
-	@Override
-	public String getName()
-	{
-		return "AirportOutput";
-	}
+        // Structure is {id, name, lat, lon}
 
-	protected void init()
-	{
-		SWEHelper fac = new SWEHelper();
+        // SWE Common data structure
+        navStruct = fac.newDataRecord(4);
+        navStruct.setName(getName());
+        navStruct.setDefinition(SWEHelper.getPropertyUri("aero/Airport"));
 
-		// Structure is {id, name, lat, lon}
+        Text id = fac.newText(SWEHelper.getPropertyUri("aero/ICAO/Code"), "ICAO Code", "Airport ICAO identification code");
+        navStruct.addComponent("code", id);
+        Text name = fac.newText(SWEHelper.getPropertyUri("Name"), "Name", "Long name" );
+        navStruct.addComponent("name", name);
+        Quantity latQuant = fac.newQuantity(SWEHelper.getPropertyUri("GeodeticLatitude"), "Latitude", null, "deg", DataType.DOUBLE);
+        navStruct.addComponent("lat", latQuant);
+        Quantity lonQuant = fac.newQuantity(SWEHelper.getPropertyUri("Longitude"), "Longitude", null, "deg", DataType.DOUBLE);
+        navStruct.addComponent("lon", lonQuant);
 
-		// SWE Common data structure
-		navStruct = fac.newDataRecord(4);
-		navStruct.setName(getName());
-		navStruct.setDefinition(SWEHelper.getPropertyUri("aero/Airport"));
+        // default encoding is text
+        encoding = fac.newTextEncoding(",", "\n");
+    }
+    
 
-		Text id = fac.newText(SWEHelper.getPropertyUri("aero/ICAO/Code"), "ICAO Code", "Airport ICAO identification code");
-		navStruct.addComponent("code", id);
-		Text name = fac.newText(SWEHelper.getPropertyUri("Name"), "Name", "Long name" );
-		navStruct.addComponent("name", name);
-		Quantity latQuant = fac.newQuantity(SWEHelper.getPropertyUri("GeodeticLatitude"), "Latitude", null, "deg", DataType.DOUBLE);
-		navStruct.addComponent("lat", latQuant);
-		Quantity lonQuant = fac.newQuantity(SWEHelper.getPropertyUri("Longitude"), "Longitude", null, "deg", DataType.DOUBLE);
-		navStruct.addComponent("lon", lonQuant);
-
-		// default encoding is text
-		encoding = fac.newTextEncoding(",", "\n");
-	}
-
-	public void start() throws SensorHubException {
-		// Nothing to do 
-	}
-
-	public double[] getLons (List<NavDbEntry> recs) {
-		double [] lons = new double[recs.size()];
-		int i=0;
-		for (NavDbEntry rec: recs) {
-			lons[i++] = rec.lon;
-		}
-		return lons;
-	}
-
-	public double[] getLats (List<NavDbEntry> recs) {
-		double [] lats = new double[recs.size()];
-		int i=0;
-		for (NavDbEntry rec: recs) {
-			lats[i++] = rec.lat;
-		}
-		return lats;
-	}
-
-	public String[] getNames (List<NavDbEntry> recs) {
-		String [] names = new String[recs.size()];
-		int i=0;
-		for (NavDbEntry rec: recs) {
-			names[i++] = rec.name;
-		}
-		return names;
-	}
-
-	public String[] getIds (List<NavDbEntry> recs) {
-		String [] ids = new String[recs.size()];
-		int i=0;
-		for (NavDbEntry rec: recs) {
-			ids[i++] = rec.id;
-		}
-		return ids;
-	}
-
-	public void sendEntries(List<NavDbEntry> recs)
+	public void sendEntries(Collection<NavDbPointEntry> recs)
 	{                
-	    Map<String, DataBlock> newRecords = new TreeMap<>();
-	    
-		for(NavDbEntry rec: recs) {
+	    long time = System.currentTimeMillis();
+        
+        for (NavDbPointEntry rec: recs) {
 			DataBlock dataBlock = navStruct.createDataBlock();
 
 			dataBlock.setStringValue(0, rec.id);
@@ -136,13 +86,10 @@ public class AirportOutput extends AbstractSensorOutput<NavDriver> implements IM
 			dataBlock.setDoubleValue(2, rec.lat);
 			dataBlock.setDoubleValue(3, rec.lon);
 			
-			newRecords.put(rec.id, dataBlock);   
-			//long time = System.currentTimeMillis();
-			//eventHandler.publishEvent(new SensorDataEvent(time, uid, NavOutput.this, dataBlock));
+			// TODO send as a single ObsEvent w/ multiple IObsData
+            var foiUID = NavDriver.AIRPORTS_UID_PREFIX + rec.id;
+            eventHandler.publish(new DataEvent(time, AirportOutput.this, foiUID, dataBlock));
 		}
-		
-		// switch to new records atomically
-		records = newRecords;
 	}
 	
 
@@ -152,38 +99,17 @@ public class AirportOutput extends AbstractSensorOutput<NavDriver> implements IM
 	}
 
 
-	@Override 
-	public DataComponent getRecordDescription()
-	{
-		return navStruct;
-	}
+    @Override 
+    public DataComponent getRecordDescription()
+    {
+        return navStruct;
+    }
 
 
 	@Override
 	public DataEncoding getRecommendedEncoding()
 	{
 		return encoding;
-	}
-	
-
-	@Override
-	public Collection<String> getEntityIDs()
-	{
-	    return parentSensor.getEntityIDs();
-	}
-
-
-	@Override
-	public Map<String, DataBlock> getLatestRecords()
-	{
-		return Collections.unmodifiableMap(records);
-	}
-
-
-	@Override
-	public DataBlock getLatestRecord(String entityID)
-	{
-	    return records.get(entityID);
 	}
     
     

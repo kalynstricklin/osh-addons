@@ -24,9 +24,6 @@ import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,20 +35,17 @@ import org.sensorhub.api.comm.IMessageQueuePush;
 import org.sensorhub.api.comm.IMessageQueuePush.MessageListener;
 import org.sensorhub.api.comm.MessageQueueConfig;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.data.FoiEvent;
-import org.sensorhub.api.data.IMultiSourceDataProducer;
 import org.sensorhub.api.module.IModuleStateManager;
-import org.sensorhub.impl.SensorHub;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.sensorhub.impl.sensor.flightAware.FlightAwareConfig.Mode;
+import org.vast.ogc.gml.IFeature;
+import org.vast.ogc.om.MovingFeature;
 import org.vast.sensorML.SMLHelper;
 import org.vast.util.Asserts;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import net.opengis.gml.v32.AbstractFeature;
 import net.opengis.gml.v32.impl.GMLFactory;
-import net.opengis.sensorml.v20.AbstractProcess;
-import net.opengis.sensorml.v20.PhysicalSystem;
 
 
 /**
@@ -59,8 +53,7 @@ import net.opengis.sensorml.v20.PhysicalSystem;
  * @author tcook
  * @since Oct 1, 2017
  */
-public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> implements IMultiSourceDataProducer,
-	FlightPlanListener, PositionListener
+public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> implements FlightPlanListener, PositionListener
 {
     private static final String STATE_CACHE_FILE = "fltaware_cache";
     private static final int MAX_CACHE_SIZE = 50000;
@@ -72,20 +65,20 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
     private static final int CACHE_SAVE_MULTIPLIER = 3; // in number of timer checks
     
     FlightPlanOutput flightPlanOutput;
-	FlightPositionOutput flightPositionOutput;
-	
-	// Helpers
-	SMLHelper smlFac = new SMLHelper();
-	GMLFactory gmlFac = new GMLFactory(true);
+    FlightPositionOutput flightPositionOutput;
+    
+    // Helpers
+    SMLHelper smlFac = new SMLHelper();
+    GMLFactory gmlFac = new GMLFactory(true);
 
-	// Dynamically created FOIs
-	Map<String, AbstractFeature> flightFois;
-	Map<String, AbstractFeature> aircraftDesc;
-	Map<String, FlightObject> flightPositions;
-	static final String SENSOR_UID_PREFIX = "urn:osh:sensor:aviation:";
-	static final String FLIGHT_UID_PREFIX = "urn:osh:aviation:flight:";
+    // Dynamically created FOIs
+    Map<String, AbstractFeature> flightFois;
+    Map<String, AbstractFeature> aircraftDesc;
+    Map<String, FlightObject> flightPositions;
+    static final String SENSOR_UID_PREFIX = "urn:osh:sensor:aviation:";
+    static final String FLIGHT_UID_PREFIX = "urn:osh:aviation:flight:";
 
-	IFlightObjectFilter flightFilter;
+    IFlightObjectFilter flightFilter;
     IFlightRouteDecoder flightRouteDecoder;
     Cache<String, FlightInfo> flightCache;
     ScheduledExecutorService watchDogTimer;
@@ -106,34 +99,34 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
     }
         
     
-	class WatchDogCheck implements Runnable
-	{	        
-	    int callsLeftBeforeCacheSave = CACHE_SAVE_MULTIPLIER;
-	    
-	    
-	    WatchDogCheck()
-	    {
-	        // call next attempt here since watchdog is also restarted 
-	        // for every attempt
-	        nextAttempt();
-	    }
-	    
-	    void resetAttempts()
-	    {
-	        numAttempts = 0;
-            nextAttempt();
-	    }
-	    
-	    void nextAttempt()
+    class WatchDogCheck implements Runnable
+    {            
+        int callsLeftBeforeCacheSave = CACHE_SAVE_MULTIPLIER;
+        
+        
+        WatchDogCheck()
         {
-	        // increase retry intervals exponentially up to MAX_RETRY_INTERVAL
-	        int expInterval = (int)(config.initRetryInterval * Math.pow(2, numAttempts));
+            // call next attempt here since watchdog is also restarted 
+            // for every attempt
+            nextAttempt();
+        }
+        
+        void resetAttempts()
+        {
+            numAttempts = 0;
+            nextAttempt();
+        }
+        
+        void nextAttempt()
+        {
+            // increase retry intervals exponentially up to MAX_RETRY_INTERVAL
+            int expInterval = (int)(config.initRetryInterval * Math.pow(2, numAttempts));
             retryInterval = Math.min(expInterval, config.maxRetryInterval);
-	        lastRetryTime = System.currentTimeMillis()/1000;
+            lastRetryTime = System.currentTimeMillis()/1000;
             numAttempts++;
         }
-	    
-	    @Override
+        
+        @Override
         public void run()
         {
             if (msgHandler != null)
@@ -158,7 +151,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
                     else
                         getLogger().info("FA connection OK: Last message received {}s ago", lastMsgAge);
                     
-                    getLogger().debug("Queue size={}, Cache size={}", msgHandler.execQueue.size(), flightCache.size());
+                    getLogger().debug("Cache size={}", flightCache.size());
                 }
                 
                 // if no message received for a while
@@ -216,9 +209,9 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
 
 	public FlightAwareDriver()
 	{
-		this.flightFois = new ConcurrentSkipListMap<>();
-		this.aircraftDesc = new ConcurrentHashMap<>();
-		this.flightPositions = new ConcurrentHashMap<>();
+        this.flightFois = new ConcurrentSkipListMap<>();
+        this.aircraftDesc = new ConcurrentHashMap<>();
+        this.flightPositions = new ConcurrentHashMap<>();
 	}
 	
 	
@@ -234,48 +227,54 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
 	
 
 	@Override
-	public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
 	{
 		// IDs
 		this.uniqueID = SENSOR_UID_PREFIX + "flightAware";
-		this.xmlID = "Earthcast";
+		this.xmlID = "FLTAWARE_FIREHOSE";
 
-		// init flight plan output
-		this.flightPlanOutput = new FlightPlanOutput(this);
-		addOutput(flightPlanOutput, false);
-		flightPlanOutput.init();
+        // init flight plan output
+        this.flightPlanOutput = new FlightPlanOutput(this);
+        addOutput(flightPlanOutput, false);
+        flightPlanOutput.init();
 
-		// init flight position output
-		this.flightPositionOutput = new FlightPositionOutput(this);
-		addOutput(flightPositionOutput, false);
-		flightPositionOutput.init();
-		
-		// init flight filter
-		if (config.filterConfig != null)
+        // init flight position output
+        this.flightPositionOutput = new FlightPositionOutput(this);
+        addOutput(flightPositionOutput, false);
+        flightPositionOutput.init();
+        
+        // init flight filter
+        if (config.filterConfig != null)
             this.flightFilter = config.filterConfig.getFilter();
-		
-		// init flight cache
-		this.flightCache = CacheBuilder.newBuilder()
+        
+        // init flight cache
+        this.flightCache = CacheBuilder.newBuilder()
                 .maximumSize(MAX_CACHE_SIZE)
                 .concurrencyLevel(2)
                 .expireAfterAccess(MAX_CACHE_AGE, TimeUnit.HOURS)
                 .build();
-		        
-        // init flight route decoder
-        this.flightRouteDecoder = new FlightRouteDecoderFlightXML(this);
-	}
-	
+                
+        if (config.decodeRoutes)
+        {
+            // init flight route decoder
+            if (config.navDbModuleId != null)
+                this.flightRouteDecoder = new FlightRouteDecoderNavDb(this, config.navDbModuleId);//"5f722e2d-226d-4ff7-81a8-6f92b80efe18");
+            else
+                this.flightRouteDecoder = new FlightRouteDecoderFlightXML(this);
+        }
+    }
+    
 
 	@Override
-	public void start() throws SensorHubException
+	protected void doStart() throws SensorHubException
 	{
 	    // if configured to use firehose only, connect to firehose now
         if (config.connectionType == Mode.FIREHOSE || config.connectionType == Mode.FIREHOSE_THEN_PUBSUB)
             startWithFirehose();
         else
             startWithPubSub();
-	}
-	
+    }
+    
 
     private void startWithFirehose() throws SensorHubException
     {
@@ -285,7 +284,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
         watchDogTimer = Executors.newSingleThreadScheduledExecutor();
         
         // connect to pub/sub channel for publishing only
-        if (config.pubSubConfig != null)
+        if (config.pubSubConfig != null && config.pubSubConfig.enablePublish)
             connectToPubSub(true);
         
         // create message handler
@@ -315,7 +314,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
                     reportStatus("Connected to Firehose channel");
                     connected = true;
                 }
-            }            
+            }
         });
         
         for(String mt: config.messageTypes)
@@ -337,7 +336,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
         
         // start watchdog thread
         startWatchDog();
-	}
+    }
     
     
     private void startWithPubSub() throws SensorHubException
@@ -369,20 +368,20 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
                 TimeUnit.SECONDS);
     }
     
-	
-	private void connectToPubSub(boolean publishOnly)
-	{
-	    try
-	    {
-	        // generate full subscription name
-	        MessageQueueConfig pubSubConfig = (MessageQueueConfig)config.pubSubConfig.clone();
+    
+    private void connectToPubSub(boolean publishOnly)
+    {
+        try
+        {
+            // generate full subscription name
+            MessageQueueConfig pubSubConfig = (MessageQueueConfig)config.pubSubConfig.clone();
             String prefix = pubSubConfig.subscriptionName == null ? "" : pubSubConfig.subscriptionName + "-";
             String hostname = InetAddress.getLocalHost().getHostName().toLowerCase() + "-";
             pubSubConfig.subscriptionName = hostname + prefix + pubSubConfig.topicName;
             
             // load message queue implementation
-	        msgQueue = (IMessageQueuePush)SensorHub.getInstance().getModuleRegistry().loadClass(pubSubConfig.moduleClass);
-            msgQueue.init(pubSubConfig);
+            var moduleReg = getParentHub().getModuleRegistry();
+	        msgQueue = (IMessageQueuePush)moduleReg.loadSubModule(pubSubConfig, true);
             
             if (!publishOnly)
             {
@@ -397,7 +396,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
                         }
                         
                         msgHandler.handle(new String(payload, StandardCharsets.UTF_8));
-                    }                
+                    }
                 });
             }
             
@@ -405,20 +404,20 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
             connected = false;
             msgQueue.start();
         }
-	    catch (Exception e)
-	    {
+        catch (Exception e)
+        {
             throw new IllegalStateException("Cannot load message queue implementation", e);
         }
-	}
-	
+    }
+    
 
 	@Override
-	public void stop() throws SensorHubException
+	protected void doStop() throws SensorHubException
 	{
 		if (watchDogTimer != null) {
 		    watchDogTimer.shutdown();
             watchDogTimer = null;
-		}
+        }
         
         if (msgHandler != null) {
             msgHandler.stop();
@@ -429,98 +428,96 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
             msgQueue.stop();
             msgQueue = null;
         }
-	    
-	    if (firehoseClient != null) {
-			firehoseClient.stop();
-			firehoseClient = null;
-	    }
-	    
-	    // also save state on stop
-	    saveCache();
-	    if (flightCache != null)
-	        flightCache.invalidateAll();
-	}
-	
-	
-	private String getOshFlightId(FlightObject fltObj)
-	{
-	    return fltObj.ident + '_' + fltObj.dest;
-	}
-	
+        
+        if (firehoseClient != null) {
+            firehoseClient.stop();
+            firehoseClient = null;
+        }
+        
+        // also save state on stop
+        saveCache();
+        if (flightCache != null)
+            flightCache.invalidateAll();
+    }
+    
+    
+    private String getOshFlightId(FlightObject fltObj)
+    {
+        return fltObj.ident + '_' + fltObj.dest;
+    }
+    
 
 	private void ensureFlightFoi(String flightId, long recordTime)
 	{						
 	    String uid = FLIGHT_UID_PREFIX + flightId;
 	    
 	    // skip if FOI already exists
-		AbstractFeature fpFoi = flightFois.get(uid);
+		IFeature fpFoi = foiMap.get(uid);
         if (fpFoi != null) 
             return;
         
 		// generate small SensorML for FOI (in this case the system is the FOI)
-		PhysicalSystem foi = smlFac.newPhysicalSystem();
+        MovingFeature foi = new MovingFeature();
 		foi.setId(flightId);
 		foi.setUniqueIdentifier(uid);
 		foi.setName(flightId + " Flight");
-		flightFois.put(uid, foi);
+		
+		// register it
+		addFoi(foi);
 
-		// send event
-		long now = System.currentTimeMillis();
-		eventHandler.publishEvent(new FoiEvent(now, flightId, this, foi, recordTime));
-
-		getLogger().trace("{}: New FOI added: {}; Num FOIs = {}", flightId, uid, flightFois.size());
+		getLogger().trace("{}: New FOI added: {}; Num FOIs = {}", flightId, uid, foiMap.size());
 	}
 	
 
-	@Override
-	public void newPosition(FlightObject fltPos)
-	{
-		//  Should never send null pos, but check it anyway
-		if(fltPos == null)
-			return;
-		
-		// Check for and add Pos and LawBox FOIs if they aren't already in cache
-		String oshFlightId = getOshFlightId(fltPos);
-		ensureFlightFoi(oshFlightId, fltPos.getClock());
-		FlightObject prevPos = flightPositions.get(oshFlightId);
-		if(prevPos != null) {
-			// Calc vert change in ft/minute
-			Long prevTime = prevPos.getClock() ;
-			Long newTime = fltPos.getClock() ;
-			Double prevAlt = prevPos.getAltitude();
-			Double newAlt = fltPos.getAltitude();
-//			System.err.println(" ??? " + oshFlightId + ":" + prevAlt + "," + newAlt + "," + prevTime + "," + newTime);
-			if(prevAlt != null && newAlt != null && prevTime != null && newTime != null && (!prevTime.equals(newTime)) ) {
-				// check math here!!!
-			    fltPos.verticalChange = (newAlt - prevAlt)/( (newTime - prevTime)/60.);
-//				System.err.println(" ***  " + oshFlightId + ":" + prevAlt + "," + newAlt + "," + prevTime + "," + newTime + " ==> " + pos.verticalChange);
-			}
-		}
-		
-		flightPositions.put(oshFlightId, fltPos);
-		flightPositionOutput.sendPosition(oshFlightId, fltPos);
-	}
-	
+    @Override
+    public void newPosition(FlightObject fltPos)
+    {
+        //  Should never send null pos, but check it anyway
+        if(fltPos == null)
+            return;
+        
+        // Check for and add Pos and LawBox FOIs if they aren't already in cache
+        String oshFlightId = getOshFlightId(fltPos);
+        ensureFlightFoi(oshFlightId, fltPos.getClock());
+        FlightObject prevPos = flightPositions.get(oshFlightId);
+        if(prevPos != null) {
+            // Calc vert change in ft/minute
+            Long prevTime = prevPos.getClock() ;
+            Long newTime = fltPos.getClock() ;
+            Double prevAlt = prevPos.getAltitude();
+            Double newAlt = fltPos.getAltitude();
+//            System.err.println(" ??? " + oshFlightId + ":" + prevAlt + "," + newAlt + "," + prevTime + "," + newTime);
+            if(prevAlt != null && newAlt != null && prevTime != null && newTime != null && (!prevTime.equals(newTime)) ) {
+                // check math here!!!
+                fltPos.verticalChange = (newAlt - prevAlt)/( (newTime - prevTime)/60.);
+//                System.err.println(" ***  " + oshFlightId + ":" + prevAlt + "," + newAlt + "," + prevTime + "," + newTime + " ==> " + pos.verticalChange);
+            }
+        }
+        
+        flightPositions.put(oshFlightId, fltPos);
+        flightPositionOutput.sendPosition(oshFlightId, fltPos);
+    }
+    
 
-	@Override
-	public void newFlightPlan(FlightObject fltPlan)
-	{
-		//  Should never send null plan
-		if (fltPlan == null)
-			return;
-		
-		// Add new FlightPlan FOI if new
-		String oshFlightId = getOshFlightId(fltPlan);
-		ensureFlightFoi(oshFlightId, fltPlan.getMessageTime()*1000);
+    @Override
+    public void newFlightPlan(FlightObject fltPlan)
+    {
+        //  Should never send null plan
+        if (fltPlan == null)
+            return;
+        
+        // Add new FlightPlan FOI if new
+        String oshFlightId = getOshFlightId(fltPlan);
+        ensureFlightFoi(oshFlightId, fltPlan.getMessageTime()*1000);
 
-		// send new data to outputs
-		flightPlanOutput.sendFlightPlan(oshFlightId, fltPlan);
-	}
+        // send new data to outputs
+        flightPlanOutput.sendFlightPlan(oshFlightId, fltPlan);
+    }
 
     
     protected void loadCache() throws SensorHubException
     {
-        IModuleStateManager stateMgr = SensorHub.getInstance().getModuleRegistry().getStateManager(getLocalID());
+        IModuleStateManager stateMgr = getParentHub().getModuleRegistry().getStateManager(getLocalID());
         
         // preload cache from file
         InputStream is = stateMgr.getAsInputStream(STATE_CACHE_FILE);
@@ -545,7 +542,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
                 }
                 
                 // read file last modified time stamp
-                File moduleDataFolder = SensorHub.getInstance().getModuleRegistry().getModuleDataFolder(getLocalID());
+                File moduleDataFolder = getParentHub().getModuleRegistry().getModuleDataFolder(getLocalID());
                 this.lastUpdatedCache = new File(moduleDataFolder, STATE_CACHE_FILE+".dat").lastModified()/1000;
             }
             catch (IOException e)
@@ -563,7 +560,7 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
         // save ID cache for hot restart
         if (flightCache != null && flightCache.size() > 0)
         {
-            IModuleStateManager stateMgr = SensorHub.getInstance().getModuleRegistry().getStateManager(getLocalID());
+            IModuleStateManager stateMgr = getParentHub().getModuleRegistry().getStateManager(getLocalID());
             
             try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(stateMgr.getOutputStream(STATE_CACHE_FILE))))
             {
@@ -583,68 +580,11 @@ public class FlightAwareDriver extends AbstractSensorModule<FlightAwareConfig> i
             getLogger().info("Saved cache state: {} entries", flightCache.size());
         }
     }
-	
+    
 
     @Override
     public boolean isConnected()
     {
         return connected;
     }
-    
-	
-	@Override
-	public Collection<String> getEntityIDs()
-	{
-		return Collections.unmodifiableCollection(flightFois.keySet());
-	}
-
-
-	@Override
-	public AbstractFeature getCurrentFeatureOfInterest()
-	{
-		return null;
-	}
-
-
-	@Override
-	public AbstractProcess getCurrentDescription(String entityID)
-	{
-		return null;
-	}
-
-
-	@Override
-	public double getLastDescriptionUpdate(String entityID)
-	{
-		return 0;
-	}
-
-
-	@Override
-	public AbstractFeature getCurrentFeatureOfInterest(String entityID)
-	{
-		return flightFois.get(entityID);
-	}
-
-
-	@Override
-	public Collection<? extends AbstractFeature> getFeaturesOfInterest()
-	{
-		return Collections.unmodifiableCollection(flightFois.values());
-	}
-
-
-	@Override
-	public Collection<String> getFeaturesOfInterestIDs()
-	{
-		return Collections.unmodifiableCollection(flightFois.keySet());
-	}
-	
-
-	@Override
-	public Collection<String> getEntitiesWithFoi(String foiID)
-	{
-	    String entityID = foiID.substring(foiID.lastIndexOf(':')+1);
-        return Arrays.asList(entityID);
-	}
 }

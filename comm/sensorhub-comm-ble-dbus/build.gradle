@@ -10,6 +10,13 @@ rootProject.allprojects {
 
 dependencies {
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
-  implementation project(':sensorhub-comm-ble')
-  embedded 'org.freedesktop:dbus:2.8'
+  api project(':sensorhub-comm-ble')
+  embeddedImpl 'org.freedesktop:dbus:2.8'
+}
+
+osgi {
+  manifest {
+    attributes('Bundle-Vendor': 'Sensia Software LLC')
+    attributes('Bundle-Activator': 'org.sensorhub.impl.comm.ble.dbus.Activator')
+  }
 }

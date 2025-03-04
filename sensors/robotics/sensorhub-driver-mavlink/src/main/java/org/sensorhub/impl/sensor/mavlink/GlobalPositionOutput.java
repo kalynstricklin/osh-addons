@@ -29,7 +29,7 @@ import com.MAVLink.common.msg_global_position_int;
  * Output for MAVLink GLOBAL_POSITION_INT messages
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Dec 12, 2015
  */
 public class GlobalPositionOutput extends MavlinkOutput
@@ -37,15 +37,8 @@ public class GlobalPositionOutput extends MavlinkOutput
     
     public GlobalPositionOutput(MavlinkDriver parentSensor)
     {
-        super(parentSensor);
+        super("platformLoc", parentSensor);
         this.samplingPeriod = 1.0; // default to 1Hz on startup        
-    }
-    
-    
-    @Override
-    public String getName()
-    {
-        return "platformLoc";
     }
     
     

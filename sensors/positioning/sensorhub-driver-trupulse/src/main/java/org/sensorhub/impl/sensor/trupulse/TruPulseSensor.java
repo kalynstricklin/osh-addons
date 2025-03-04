@@ -18,7 +18,6 @@ package org.sensorhub.impl.sensor.trupulse;
 import org.sensorhub.api.comm.ICommProvider;
 import org.sensorhub.api.common.SensorHubException;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
-import org.sensorhub.impl.sensor.trupulse.TruPulseOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +30,8 @@ import org.slf4j.LoggerFactory;
  * TruPulse sensor, one can calculate the geospatial position of the target.
  * </p>
  *
- * @author Mike Botts <mike.botts@botts-inc.com>
+ * @author Mike Botts
+ * @author Alex Robin
  * @since June 8, 2015
  */
 public class TruPulseSensor extends AbstractSensorModule<TruPulseConfig>
@@ -39,7 +39,7 @@ public class TruPulseSensor extends AbstractSensorModule<TruPulseConfig>
     static final Logger log = LoggerFactory.getLogger(TruPulseSensor.class);
     
     ICommProvider<?> commProvider;
-    TruPulseOutput dataInterface;
+    TruPulseOutput rangeOutput;
     
     
     public TruPulseSensor()
@@ -48,18 +48,18 @@ public class TruPulseSensor extends AbstractSensorModule<TruPulseConfig>
     
     
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
         // generate identifiers: use serial number from config or first characters of local ID
         generateUniqueID("urn:lasertech:trupulse360:", config.serialNumber);
         generateXmlID("TRUPULSE_", config.serialNumber);
         
         // init main data interface
-        dataInterface = new TruPulseOutput(this);
-        addOutput(dataInterface, false);
-        dataInterface.init();
+        rangeOutput = new TruPulseOutput(this);
+        addOutput(rangeOutput, false);
+        rangeOutput.init();
     }
 
 
@@ -69,13 +69,13 @@ public class TruPulseSensor extends AbstractSensorModule<TruPulseConfig>
         synchronized (sensorDescLock)
         {
             super.updateSensorDescription();
-            sensorDescription.setDescription("Laser RangeFinder for determining distance, inclination, and azimuth");
+            sensorDescription.setDescription("Laser range finder for determining distance, inclination, and azimuth");
         }
     }
 
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
         // init comm provider
         if (commProvider == null)
@@ -86,7 +86,8 @@ public class TruPulseSensor extends AbstractSensorModule<TruPulseConfig>
                     throw new SensorHubException("No communication settings specified");
                 
                 // start comm provider
-                commProvider = config.commSettings.getProvider();
+                var moduleReg = getParentHub().getModuleRegistry();
+                commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
                 commProvider.start();
             }
             catch (Exception e)
@@ -97,16 +98,16 @@ public class TruPulseSensor extends AbstractSensorModule<TruPulseConfig>
         }
         
         // start measurement stream
-        dataInterface.start(commProvider);
+        rangeOutput.start(commProvider);
     }
     
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
-        if (dataInterface != null)
-            dataInterface.stop();
-                    
+        if (rangeOutput != null)
+            rangeOutput.stop();
+        
         if (commProvider != null)
         {
             commProvider.stop();

@@ -2,7 +2,7 @@ package uk.co.envsys.sensorhub.sensor.httpweather;
 
 import java.util.Date;
 
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.vast.swe.SWEHelper;
 
@@ -21,7 +21,7 @@ public class HttpWeatherOutput extends AbstractSensorOutput<HttpWeatherSensor> {
      * @param parentSensor - the parent sensor
      */
 	public HttpWeatherOutput(HttpWeatherSensor parentSensor) {
-		super(parentSensor);
+		super("httpweather", parentSensor);
 	}
 	
 	/**
@@ -173,12 +173,7 @@ public class HttpWeatherOutput extends AbstractSensorOutput<HttpWeatherSensor> {
         latestRecord = dataBlock;
         latestRecordTime = System.currentTimeMillis();
         // Publish
-        eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, HttpWeatherOutput.this, dataBlock));
-	}
-	
-	@Override
-	public String getName() {
-		return "httpweather";
+        eventHandler.publish(new DataEvent(latestRecordTime, HttpWeatherOutput.this, dataBlock));
 	}
 
 	@Override

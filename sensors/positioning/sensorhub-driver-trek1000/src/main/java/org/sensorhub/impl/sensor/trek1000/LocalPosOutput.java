@@ -1,7 +1,7 @@
 
 package org.sensorhub.impl.sensor.trek1000;
 
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.sensor.AbstractSensorOutput;
 import org.vast.data.DataRecordImpl;
 import org.vast.swe.SWEConstants;
@@ -19,7 +19,7 @@ import net.opengis.swe.v20.Vector;
  * Output of raw anchor to anchor or tag to anchor ranges
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Aug 4, 2017
  */
 public class LocalPosOutput extends AbstractSensorOutput<Trek1000Sensor>
@@ -30,7 +30,7 @@ public class LocalPosOutput extends AbstractSensorOutput<Trek1000Sensor>
 
     public LocalPosOutput(Trek1000Sensor parentSensor)
     {
-        super(parentSensor);
+        super("xyzLoc", parentSensor);
     }
 
 
@@ -66,14 +66,7 @@ public class LocalPosOutput extends AbstractSensorOutput<Trek1000Sensor>
         
         latestRecord = dataBlock;
         latestRecordTime = msgTime;
-        eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, this, dataBlock));
-    }
-
-
-    @Override
-    public String getName()
-    {
-        return "xyzLoc";
+        eventHandler.publish(new DataEvent(latestRecordTime, this, dataBlock));
     }
 
 

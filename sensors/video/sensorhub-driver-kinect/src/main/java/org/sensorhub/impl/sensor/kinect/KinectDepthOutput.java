@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
 import org.openkinect.freenect.DepthHandler;
 import org.openkinect.freenect.Device;
 import org.openkinect.freenect.FrameMode;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.vast.data.DataBlockMixed;
 import org.vast.data.TextEncodingImpl;
 import org.vast.swe.SWEHelper;
@@ -32,7 +32,7 @@ import net.opengis.swe.v20.Quantity;
 
 class KinectDepthOutput extends KinectOutputInterface {
 
-	private static final String STR_NAME = new String("Kinect Depth");
+	private static final String STR_NAME = new String("depthData");
 
 	private static final String STR_POINT_UNITS_OF_MEASURE = new String("m");
 
@@ -72,11 +72,14 @@ class KinectDepthOutput extends KinectOutputInterface {
 
 	public KinectDepthOutput(KinectSensor parentSensor, Device kinectDevice) {
 
-		super(parentSensor, kinectDevice);
+        this(STR_NAME, parentSensor, kinectDevice);
+    }	
+	
+	protected KinectDepthOutput(String name, KinectSensor parentSensor, Device kinectDevice) {
 
-		name = STR_NAME;
+		super(name, parentSensor, kinectDevice);
 
-		samplingTimeMillis = (long) (getParentModule().getConfiguration().samplingTime * MS_PER_S);
+		samplingTimeMillis = (long) (getParentProducer().getConfiguration().samplingTime * MS_PER_S);
 
 		numPoints = computeNumPoints();
 	}
@@ -98,7 +101,7 @@ class KinectDepthOutput extends KinectOutputInterface {
 
 		numPoints = computeNumPoints();
 
-		device.setDepthFormat(getParentModule().getConfiguration().depthFormat);
+		device.setDepthFormat(getParentProducer().getConfiguration().depthFormat);
 
 		VectorHelper factory = new VectorHelper();
 
@@ -163,7 +166,7 @@ class KinectDepthOutput extends KinectOutputInterface {
 					
 					latestRecordTime = System.currentTimeMillis();
 					
-					eventHandler.publishEvent(new SensorDataEvent(latestRecordTime, KinectDepthOutput.this, dataBlock));
+					eventHandler.publish(new DataEvent(latestRecordTime, KinectDepthOutput.this, dataBlock));
 
 					frame.position(0);
 
@@ -192,12 +195,12 @@ class KinectDepthOutput extends KinectOutputInterface {
 
 	protected int computeNumPoints() {
 
-		frameWidth = getParentModule().getConfiguration().frameWidth;
-		frameHeight = getParentModule().getConfiguration().frameHeight;
+		frameWidth = getParentProducer().getConfiguration().frameWidth;
+		frameHeight = getParentProducer().getConfiguration().frameHeight;
 
 		int numPoints = frameWidth * frameHeight;
 
-		scaleFactor = getParentModule().getConfiguration().pointCloudScaleFactor;
+		scaleFactor = getParentProducer().getConfiguration().pointCloudScaleFactor;
 
 		if ((scaleFactor > 0) && (scaleFactor <= 1.0)) {
 

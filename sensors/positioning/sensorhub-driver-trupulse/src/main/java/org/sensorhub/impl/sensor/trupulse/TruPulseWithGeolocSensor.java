@@ -15,10 +15,6 @@ Copyright (C) 2012-2019 Sensia Software LLC. All Rights Reserved.
 package org.sensorhub.impl.sensor.trupulse;
 
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.processing.DataSourceConfig.InputLinkConfig;
-import org.sensorhub.api.processing.StreamingDataSourceConfig;
-import org.sensorhub.impl.process.trupulse.TargetGeolocConfig;
-import org.sensorhub.impl.process.trupulse.TargetGeolocProcess;
 
 
 /**
@@ -32,56 +28,34 @@ import org.sensorhub.impl.process.trupulse.TargetGeolocProcess;
  */
 public class TruPulseWithGeolocSensor extends TruPulseSensor
 {
-    TargetGeolocProcess geolocProcess;
     TruPulseGeolocOutput geolocOutput;
     
     
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
-        // create geoloc processing config
-        TargetGeolocConfig geolocProcessConfig = new TargetGeolocConfig();
-        
-        StreamingDataSourceConfig trupulseSrc = new StreamingDataSourceConfig();
-        trupulseSrc.producerID = getLocalID();
-        InputLinkConfig conn1 = new InputLinkConfig();
-        conn1.source = dataInterface.getName();
-        conn1.destination = dataInterface.getName();
-        trupulseSrc.inputConnections.add(conn1);
-        geolocProcessConfig.dataSources.add(trupulseSrc);
-        
-        StreamingDataSourceConfig locationSrc = new StreamingDataSourceConfig();
-        locationSrc.producerID = ((TruPulseWithGeolocConfig)config).locationSourceID;
-        InputLinkConfig conn2 = new InputLinkConfig();
-        conn2.source = ((TruPulseWithGeolocConfig)config).locationOutputName;
-        conn2.destination = "sensorLocation";
-        locationSrc.inputConnections.add(conn2);
-        geolocProcessConfig.dataSources.add(locationSrc);
-        
-        // add geoloc processing
-        geolocProcess = new TargetGeolocProcess();        
-        geolocProcess.init(geolocProcessConfig);
-                
         // add geoloc output
-        geolocOutput = new TruPulseGeolocOutput(this, geolocProcess.getAllOutputs().get("targetLocation"));
+        geolocOutput = new TruPulseGeolocOutput(this);
         addOutput(geolocOutput, false);
     }
 
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
-        super.start();
-        geolocProcess.start();
+        super.doStart();
+        if (geolocOutput != null)
+            geolocOutput.start();
     }
 
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
-        geolocProcess.stop();
-        super.stop();        
+        if (geolocOutput != null)
+            geolocOutput.stop();
+        super.doStop();
     }
 }

@@ -24,7 +24,7 @@ import org.vast.swe.SWEHelper;
  * Output providing GNSS receiver quality and DOP information.
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Aug 27, 2015
  */
 public class GPSQualityOutput extends NMEAGpsOutput
@@ -32,15 +32,8 @@ public class GPSQualityOutput extends NMEAGpsOutput
         
     public GPSQualityOutput(NMEAGpsSensor parentSensor)
     {
-        super(parentSensor);
+        super("gpsQuality", parentSensor);
         this.samplingPeriod = 1.0; // default to 1Hz on startup
-    }
-    
-    
-    @Override
-    public String getName()
-    {
-        return "gpsQuality";
     }
 
     

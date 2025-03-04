@@ -5,17 +5,18 @@ version = '0.0.1'
 dependencies {
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
   implementation project(':sensorhub-driver-rtpcam')
-  implementation group: 'org.apache.cxf.services.ws-discovery', name: 'cxf-services-ws-discovery-api', version: '3.1.11'
-  implementation group: 'org.apache.cxf.services.ws-discovery', name: 'cxf-services-ws-discovery-service', version: '3.1.11'
-  implementation group: 'org.apache.cxf', name: 'cxf-rt-transports-http-jetty', version: '3.1.11'
-  implementation group: 'org.apache.cxf', name: 'cxf-rt-bindings-soap', version: '3.1.11'
-  implementation('net.sf.jipcam:jipcam:0.9.1') {
+  embeddedImpl 'org.apache.cxf.services.ws-discovery:cxf-services-ws-discovery-api:3.1.11'
+  embeddedImpl 'org.apache.cxf.services.ws-discovery:cxf-services-ws-discovery-service:3.1.11'
+  embeddedImpl 'org.apache.cxf:cxf-rt-transports-http-jetty:3.1.11'
+  embeddedImpl 'org.apache.cxf:cxf-rt-bindings-soap:3.1.11'
+  embeddedImpl 'javax.xml.soap:javax.xml.soap-api:1.3.8'
+  embeddedImpl('net.sf.jipcam:jipcam:0.9.1') {
     exclude group: 'javax.servlet', module: 'servlet-api'
     exclude group: 'commons-cli', module: 'commons-cli'
     exclude group: 'commons-httpclient', module: 'commons-httpclient'
   }
 
-  implementation fileTree(dir: 'lib', include: ['*.jar'])
+  embeddedImpl fileTree(dir: 'lib', include: ['*.jar'])
   testImplementation project(path: ':sensorhub-driver-videocam', configuration: 'testArtifacts')
 }
 
@@ -26,10 +27,10 @@ test {
 }
 
 // add info to OSGi manifest
-jar {
+osgi {
   manifest {
-    attributes 'Bundle-Vendor': 'Botts Innovative Research, Inc.'
-    attributes 'Bundle-Activator': 'org.sensorhub.impl.sensor.axis.Activator'
+    attributes('Bundle-Vendor': 'Botts Innovative Research, Inc.')
+    attributes('Bundle-Activator': 'org.sensorhub.impl.sensor.onvif.Activator')
   }
 }
 

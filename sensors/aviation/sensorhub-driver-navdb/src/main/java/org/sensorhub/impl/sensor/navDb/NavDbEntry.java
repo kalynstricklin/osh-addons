@@ -14,30 +14,46 @@ Copyright (C) 2018 Delta Air Lines, Inc. All Rights Reserved.
 
 package org.sensorhub.impl.sensor.navDb;
 
-public class NavDbEntry
+
+/**
+ * <p>
+ * Base class for all Nav DB entries
+ * </p>
+ *
+ * @author Alex Robin
+ * @since Nov 11, 2021
+ */
+public class NavDbEntry implements Comparable<NavDbEntry>
 {
-	public enum Type { AIRPORT, NAVAID, WAYPOINT, AIRWAY};  // AIRWAYs will have multiple Lat/Lons
-	public Type type;
-	public String icao;
-	public String id;  // id is icao for airports, VOR id for navaids, wayptId for waypoints
-	public String name;
-	public Double lat;
-	public Double lon;
-	public String latStr;
-	public String lonStr;
-	public String region;  // Three char region id
-	
-	public NavDbEntry(Type type, String id, double lat, double lon) throws NumberFormatException{
-		this.type  = type;
-		this.id = id.trim();
-		this.lat = lat;
-		this.lon = lon;
-		if(type == Type.AIRPORT || type == Type.WAYPOINT)
-			icao = id;
-	}
-	
-	@Override
-	public String toString() {
-		return type + "," + region + "," + icao + "," + id + ","  + name + "," + lat + "," + lon;
-	}
+    public enum Type
+    {
+        AIRPORT, NAVAID, WAYPOINT, AIRWAY, SID, STAR, UNKNOWN
+    };
+
+    public String region; // 3 chars region id
+    public Type type;
+    public String id; // ID is the same as airport ICAO for airports
+    public String airport = ""; // ICAO code of associated airport
+    
+
+    public NavDbEntry(Type type, String id)
+    {
+        this.type = type;
+        this.id = id;
+    }
+
+
+    @Override
+    public int compareTo(NavDbEntry o)
+    {
+        int comp = id.compareTo(o.id);
+        
+        if (comp == 0)
+            comp = region.compareTo(o.region);
+        
+        if (comp == 0)
+            comp = airport.compareTo(o.airport);
+        
+        return comp;
+    }
 }

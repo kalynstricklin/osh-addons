@@ -15,18 +15,9 @@ Copyright (C) 2012-2015 Sensia Software LLC. All Rights Reserved.
 package org.sensorhub.impl.sensor.nexrad;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.data.IMultiSourceDataProducer;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.sensorhub.impl.sensor.nexrad.aws.NexradSqsService;
 import org.sensorhub.impl.sensor.nexrad.aws.sqs.ChunkQueueManager;
@@ -36,10 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.vast.sensorML.SMLHelper;
 
-import net.opengis.gml.v32.AbstractFeature;
 import net.opengis.gml.v32.Point;
 import net.opengis.gml.v32.impl.GMLFactory;
-import net.opengis.sensorml.v20.AbstractProcess;
 import net.opengis.sensorml.v20.PhysicalSystem;
 
 
@@ -49,31 +38,26 @@ import net.opengis.sensorml.v20.PhysicalSystem;
  *
  * @author Tony Cook <tony.coook@opensensorhub.org>
  */
-public class NexradSensor extends AbstractSensorModule<NexradConfig> implements IMultiSourceDataProducer
+public class NexradSensor extends AbstractSensorModule<NexradConfig>
 {
 	static final Logger logger = LoggerFactory.getLogger(NexradSensor.class);
-	static final String SITE_UID_PREFIX = "urn:test:sensors:weather:nexrad";
+	static final String SITE_UID_PREFIX = "urn:osh:sensors:nexrad:";
 
 	NexradOutput dataInterface;
 	RadialProvider radialProvider;  // either Realtime or archive AWS source
 	boolean isRealtime;
 
-	Set<String> foiIDs;
-	Map<String, PhysicalSystem> siteFois;
-	Map<String, PhysicalSystem> siteDescs;
-
 	NexradSqsService nexradSqs;
-
+	ChunkQueueManager chunkQueueManager;
+	
+	
 	public NexradSensor() throws SensorHubException
 	{
-		this.foiIDs = new LinkedHashSet<String>();
-		this.siteFois = new LinkedHashMap<String, PhysicalSystem>();
-		this.siteDescs = new LinkedHashMap<String, PhysicalSystem>();
 	}
+	
 
-	ChunkQueueManager chunkQueueManager;
-
-	public void setQueueActive() throws IOException {
+	public void setQueueActive() throws IOException
+	{
 		if(!isRealtime) 
 			return;
 		nexradSqs.setQueueActive();
@@ -82,16 +66,19 @@ public class NexradSensor extends AbstractSensorModule<NexradConfig> implements 
 		//		chunkQueue.setS3client(nexradSqs.getS3client());  //
 		//		nexradSqs.start();
 	}
+	
 
-	public void setQueueIdle() {
+	public void setQueueIdle()
+	{
 		if(isRealtime)
 			nexradSqs.setQueueIdle();
 	}
+	
 
 	@Override
-	public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
 	{
-		super.init();
+		super.doInit();
 
 		// generate IDs
 		this.uniqueID = SITE_UID_PREFIX + "network";
@@ -129,22 +116,13 @@ public class NexradSensor extends AbstractSensorModule<NexradConfig> implements 
 			super.updateSensorDescription();
 			
 			sensorDescription.setId("NEXRAD_SENSOR");
-			sensorDescription.setUniqueIdentifier(SITE_UID_PREFIX); // + config.siteIds.get(0));
+			sensorDescription.setUniqueIdentifier(SITE_UID_PREFIX);
 			sensorDescription.setDescription("Sensor supporting Level II Nexrad data");
-
-
-			// append href to all stations composing the network
-			for (String siteId: config.siteIds)
-			{
-				String name = "site_" + siteId;
-				String href = SITE_UID_PREFIX + siteId;
-				((PhysicalSystem)sensorDescription).getComponentList().add(name, href, null);
-			}
 		}
 	}
 
 	@Override
-	public void start() throws SensorHubException
+	protected void doStart() throws SensorHubException
 	{
 		SMLHelper smlFac = new SMLHelper();
 		GMLFactory gmlFac = new GMLFactory(true);
@@ -166,16 +144,7 @@ public class NexradSensor extends AbstractSensorModule<NexradConfig> implements 
 			NexradSite site = config.getSite(siteId);
 			stationLoc.setPos(new double [] {site.lat, site.lon, site.elevation});
 			foi.setLocation(stationLoc);
-			siteFois.put(uid, foi);
-			foiIDs.add(uid);
-
-			// TODO generate full SensorML for sensor description
-			PhysicalSystem sensorDesc = smlFac.newPhysicalSystem();
-			sensorDesc.setId("SITE_" + siteId);
-			sensorDesc.setUniqueIdentifier(uid);
-			sensorDesc.setName(name);
-			sensorDesc.setDescription(description);
-			siteDescs.put(uid, sensorDesc);
+			addFoi(foi);
 		}
 
 		dataInterface.start(radialProvider); 
@@ -183,7 +152,7 @@ public class NexradSensor extends AbstractSensorModule<NexradConfig> implements 
 
 
 	@Override
-	public void stop() throws SensorHubException
+	protected void doStop() throws SensorHubException
 	{
 		dataInterface.stop();
 		if(isRealtime)
@@ -202,47 +171,5 @@ public class NexradSensor extends AbstractSensorModule<NexradConfig> implements 
 	public boolean isConnected()
 	{
 		return true;
-	}
-
-
-	@Override
-	public Collection<String> getEntityIDs() {
-		return Collections.unmodifiableCollection(siteFois.keySet());
-	}
-
-
-	@Override
-	public AbstractProcess getCurrentDescription(String entityID) {
-		return siteDescs.get(entityID);
-	}
-
-
-	@Override
-	public double getLastDescriptionUpdate(String entityID) {
-		return 0;
-	}
-
-
-	@Override
-	public AbstractFeature getCurrentFeatureOfInterest(String entityID) {
-		return siteFois.get(entityID);
-	}
-
-
-	@Override
-	public Collection<? extends AbstractFeature> getFeaturesOfInterest() {
-		return Collections.unmodifiableCollection(siteFois.values());
-	}
-
-
-	@Override
-	public Collection<String> getFeaturesOfInterestIDs() {
-		return Collections.unmodifiableCollection(foiIDs);
-	}
-
-	@Override
-	public Collection<String> getEntitiesWithFoi(String foiID)
-	{
-		return Arrays.asList(foiID);
 	}
 }

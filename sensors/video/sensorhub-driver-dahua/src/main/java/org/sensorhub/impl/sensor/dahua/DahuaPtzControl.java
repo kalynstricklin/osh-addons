@@ -21,13 +21,10 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.Collection;
-
 import net.opengis.swe.v20.DataBlock;
 import net.opengis.swe.v20.DataChoice;
 import net.opengis.swe.v20.DataComponent;
-
-import org.sensorhub.api.common.CommandStatus;
-import org.sensorhub.api.common.CommandStatus.StatusCode;
+import org.sensorhub.api.command.CommandException;
 import org.sensorhub.api.sensor.SensorException;
 import org.sensorhub.impl.sensor.AbstractSensorControl;
 import org.sensorhub.impl.sensor.videocam.VideoCamHelper;
@@ -43,7 +40,7 @@ import org.vast.data.DataChoiceImpl;
  * (PTZ) capabilities.
  * </p>
  *
- * @author Mike Botts <mike.botts@botts-inc.com>
+ * @author Mike Botts
  * @since March 2016
  */
 public class DahuaPtzControl extends AbstractSensorControl<DahuaCameraDriver>
@@ -70,15 +67,8 @@ public class DahuaPtzControl extends AbstractSensorControl<DahuaCameraDriver>
     
     protected DahuaPtzControl(DahuaCameraDriver driver)
     {
-        super(driver);
+        super("ptzControl", driver);
         this.alwaysRequestPtzStatus = !driver.getConfiguration().exclusiveControl;
-    }
-    
-    
-    @Override
-    public String getName()
-    {
-        return "ptzControl";
     }
     
     
@@ -131,7 +121,15 @@ public class DahuaPtzControl extends AbstractSensorControl<DahuaCameraDriver>
         DataBlock initCmd;
         commandData.setSelectedItem(7);
         initCmd = commandData.createDataBlock();
-        execCommand(initCmd);
+        
+        try
+        {
+            execCommand(initCmd);
+        }
+        catch (CommandException e)
+        {
+            throw new SensorException("Init command failed", e);
+        }
     }
     
     
@@ -145,19 +143,17 @@ public class DahuaPtzControl extends AbstractSensorControl<DahuaCameraDriver>
     {    
         return commandData;
     }
-
-
+    
+    
     @Override
-    public CommandStatus execCommand(DataBlock command) throws SensorException
+    protected boolean execCommand(DataBlock command) throws CommandException
     {
         // reject if commands are too frequent because camera cannot handle 
         // successive commands if they come too fast
         if (System.currentTimeMillis() - lastCommandReceived < 1000)
         {
             parentSensor.getLogger().warn("PTZ command rejected");
-            CommandStatus cmdStatus = new CommandStatus();
-            cmdStatus.status = StatusCode.REJECTED;
-            return cmdStatus;
+            return false;
         }        
         lastCommandReceived = System.currentTimeMillis();
         
@@ -222,7 +218,7 @@ public class DahuaPtzControl extends AbstractSensorControl<DahuaCameraDriver>
         	       	
         	// send request to absolute pan/tilt/zoom positions
             URL optionsURL = new URL(parentSensor.getHostUrl() + 
-            		"/ptz.cgi?action=start&channel=0&code=PositionABS&arg1=" + pan + "&arg2=" + (-tilt) + "&arg3=" + zoom*120);
+            		"/ptz.cgi?action=start&channel=0&code=PositionABS&arg1=" + pan + "&arg2=" + tilt + "&arg3=" + zoom*120);
             if (!alwaysRequestPtzStatus)
             {
                 parentSensor.ptzDataInterface.pan = (float)pan;
@@ -237,12 +233,9 @@ public class DahuaPtzControl extends AbstractSensorControl<DahuaCameraDriver>
 	    }
 	    catch (Exception e)
 	    {
-	    	throw new SensorException("Error connecting to Dahua PTZ control", e);
+	    	throw new CommandException("Error connecting to Dahua PTZ control", e);
 	    }        
        
-        CommandStatus cmdStatus = new CommandStatus();
-        cmdStatus.status = StatusCode.COMPLETED;    
-        
-        return cmdStatus;
+        return true;
     }
 }

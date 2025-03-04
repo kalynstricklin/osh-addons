@@ -37,7 +37,7 @@ import org.vast.swe.SWEHelper;
  * Driver for XSens MTi Inertial Motion Unit
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since July 1, 2015
  */
 public class VN200Sensor extends AbstractSensorModule<VN200Config>
@@ -63,9 +63,9 @@ public class VN200Sensor extends AbstractSensorModule<VN200Config>
 
 
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
         // generate IDs
         generateUniqueID("urn:vectornav:imu:", null);
@@ -120,7 +120,7 @@ public class VN200Sensor extends AbstractSensorModule<VN200Config>
 
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
         if (started)
             return;
@@ -135,7 +135,8 @@ public class VN200Sensor extends AbstractSensorModule<VN200Config>
                 if (config.commSettings == null)
                     throw new SensorHubException("No communication settings specified");
                 
-                commProvider = config.commSettings.getProvider();
+                var moduleReg = getParentHub().getModuleRegistry();
+                commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
                 commProvider.start();
             }
             catch (Exception e)
@@ -292,7 +293,7 @@ public class VN200Sensor extends AbstractSensorModule<VN200Config>
     
     
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
         if (commProvider != null)
         {

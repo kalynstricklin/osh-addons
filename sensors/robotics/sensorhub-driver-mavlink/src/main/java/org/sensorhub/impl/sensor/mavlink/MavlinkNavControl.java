@@ -20,8 +20,7 @@ import net.opengis.swe.v20.DataRecord;
 import net.opengis.swe.v20.DataType;
 import net.opengis.swe.v20.Quantity;
 import net.opengis.swe.v20.Vector;
-import org.sensorhub.api.common.CommandStatus;
-import org.sensorhub.api.common.CommandStatus.StatusCode;
+import org.sensorhub.api.command.CommandException;
 import org.sensorhub.api.sensor.SensorException;
 import org.sensorhub.impl.sensor.mavlink.MavlinkConfig.CmdTypes;
 import org.vast.swe.SWEConstants;
@@ -40,7 +39,7 @@ import com.MAVLink.enums.MAV_FRAME;
  * Implementation of navigation control interface for MAVLink systems
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since Jul 5, 2016
  */
 public class MavlinkNavControl extends MavlinkControlInput
@@ -49,14 +48,7 @@ public class MavlinkNavControl extends MavlinkControlInput
     
     protected MavlinkNavControl(MavlinkDriver driver)
     {
-        super(driver);
-    }
-    
-    
-    @Override
-    public String getName()
-    {
-        return "navCommands";
+        super("navCommands", driver);
     }
     
     
@@ -155,7 +147,7 @@ public class MavlinkNavControl extends MavlinkControlInput
     
 
     @Override
-    public CommandStatus execCommand(DataBlock command) throws SensorException
+    protected boolean execCommand(DataBlock command) throws CommandException
     {
         try
         {
@@ -284,12 +276,10 @@ public class MavlinkNavControl extends MavlinkControlInput
         }
         catch (Exception e)
         {
-            throw new SensorException("Cannot execute command", e);
+            throw new CommandException("Cannot execute command", e);
         }
         
-        CommandStatus cmdStatus = new CommandStatus();
-        cmdStatus.status = StatusCode.COMPLETED;
-        return cmdStatus;
+        return true;
     }
 
 

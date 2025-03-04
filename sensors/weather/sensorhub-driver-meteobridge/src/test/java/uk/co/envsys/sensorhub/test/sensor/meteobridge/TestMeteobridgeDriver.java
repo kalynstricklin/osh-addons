@@ -1,7 +1,8 @@
 package uk.co.envsys.sensorhub.test.sensor.meteobridge;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
+import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
@@ -11,11 +12,11 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.sensorhub.api.common.Event;
-import org.sensorhub.api.common.IEventListener;
+import org.sensorhub.api.event.Event;
+import org.sensorhub.api.event.IEventListener;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.sensor.ISensorDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.IStreamingDataInterface;
+import org.sensorhub.api.data.DataEvent;
 
 import org.vast.data.TextEncodingImpl;
 import org.vast.sensorML.SMLUtils;
@@ -52,7 +53,7 @@ public class TestMeteobridgeDriver implements IEventListener {
 	@Test
 	public void testOutputDescMatchesConfig() throws Exception {
 		// Just print the descriptions for now
-		for (ISensorDataInterface di: driver.getObservationOutputs().values()) {
+		for (IStreamingDataInterface di: driver.getObservationOutputs().values()) {
             DataComponent dataMsg = di.getRecordDescription();
             if(DEBUG) {
             	System.out.println();
@@ -81,16 +82,24 @@ public class TestMeteobridgeDriver implements IEventListener {
             
             // ensure that sol0evo is disabled by default, and not included in outputs
             assertTrue(!config.sol0evoEnabled);
-            assertTrue(dataMsg.getComponent("sol0evo") == null);
+            try {
+                dataMsg.getComponent("sol0evo");
+                fail("Exception expected");
+            } catch (IllegalArgumentException e) {
+            };
         }
 	}
 	
 	@Test
 	public void testDisabledComponentNotInOutputDesc() throws Exception {
-		for (ISensorDataInterface di: driver.getObservationOutputs().values()) {
+		for (IStreamingDataInterface di: driver.getObservationOutputs().values()) {
             DataComponent dataMsg = di.getRecordDescription();
             assertTrue(!config.sol0evoEnabled);
-            assertTrue(dataMsg.getComponent("sol0evo") == null);
+            try {
+                dataMsg.getComponent("sol0evo");
+                fail("Exception expected");
+            } catch (IllegalArgumentException e) {
+            };
         }
 	}
 	
@@ -101,7 +110,7 @@ public class TestMeteobridgeDriver implements IEventListener {
         	System.out.println();
         	new SMLUtils(SWEUtils.V2_0).writeProcess(System.out, smlDesc, true);
         }
-        assertTrue(smlDesc.getNumOutputs() == 1);
+        assertEquals(2, smlDesc.getNumOutputs());
         assertTrue(smlDesc.getDescription() == "Weather station connected to a Meteobridge device");
     }
     
@@ -117,7 +126,7 @@ public class TestMeteobridgeDriver implements IEventListener {
     	// Unimplmented, need sample meteobridge output from livedataxml.cgi
     	// register this as listener
     	// start driver (log/respond to events)
-    	ISensorDataInterface meteobridgeOutput = driver.getObservationOutputs().get("weather");
+    	IStreamingDataInterface meteobridgeOutput = driver.getObservationOutputs().get("weather");
     	
     	writer = new AsciiDataWriter();
         writer.setDataEncoding(new TextEncodingImpl(",", "\n"));
@@ -147,9 +156,9 @@ public class TestMeteobridgeDriver implements IEventListener {
     }
 	
 	@Override
-	public void handleEvent(Event<?> e) {
-		assertTrue(e instanceof SensorDataEvent);
-        SensorDataEvent newDataEvent = (SensorDataEvent)e;
+	public void handleEvent(Event e) {
+		assertTrue(e instanceof DataEvent);
+        DataEvent newDataEvent = (DataEvent)e;
         DataBlock latestReading = newDataEvent.getRecords()[0];
         sampleCount++;
         

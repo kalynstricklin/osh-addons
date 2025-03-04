@@ -32,7 +32,7 @@ import org.vast.swe.SWEHelper;
  * Driver for XSens MTi Inertial Motion Unit
  * </p>
  *
- * @author Alex Robin <alex.robin@sensiasoftware.com>
+ * @author Alex Robin
  * @since July 1, 2015
  */
 public class MtiSensor extends AbstractSensorModule<MtiConfig>
@@ -50,9 +50,9 @@ public class MtiSensor extends AbstractSensorModule<MtiConfig>
 
 
     @Override
-    public void init() throws SensorHubException
+    protected void doInit() throws SensorHubException
     {
-        super.init();
+        super.doInit();
         
         // generate IDs
         generateUniqueID("urn:xsens:imu:mti:", null);
@@ -103,7 +103,7 @@ public class MtiSensor extends AbstractSensorModule<MtiConfig>
 
 
     @Override
-    public void start() throws SensorHubException
+    protected void doStart() throws SensorHubException
     {
         // init comm provider
         if (commProvider == null)
@@ -115,7 +115,8 @@ public class MtiSensor extends AbstractSensorModule<MtiConfig>
                 if (config.commSettings == null)
                     throw new SensorHubException("No communication settings specified");
                 
-                commProvider = config.commSettings.getProvider();
+                var moduleReg = getParentHub().getModuleRegistry();
+                commProvider = (ICommProvider<?>)moduleReg.loadSubModule(config.commSettings, true);
                 commProvider.start();
             }
             catch (Exception e)
@@ -132,7 +133,7 @@ public class MtiSensor extends AbstractSensorModule<MtiConfig>
     
 
     @Override
-    public void stop() throws SensorHubException
+    protected void doStop() throws SensorHubException
     {
         if (dataInterface != null)
             dataInterface.stop();

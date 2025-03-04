@@ -25,7 +25,7 @@ import javax.imageio.ImageIO;
 import org.openkinect.freenect.Device;
 import org.openkinect.freenect.FrameMode;
 import org.openkinect.freenect.VideoHandler;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.api.sensor.SensorException;
 import org.sensorhub.impl.sensor.videocam.VideoCamHelper;
 import org.vast.data.DataBlockMixed;
@@ -34,7 +34,7 @@ import net.opengis.swe.v20.DataBlock;
 
 class KinectInfraredOutputMJPEG extends KinectInfraredOutput {
 
-	private static final String STR_NAME = new String("Kinect IR Camera (MJPEG)");
+	private static final String STR_NAME = new String("irCamera_MJPEG)");
 
 	private static final String STR_JPG_FORMAT_SPECIFIER = new String("jpg");
 
@@ -42,23 +42,21 @@ class KinectInfraredOutputMJPEG extends KinectInfraredOutput {
 
 	public KinectInfraredOutputMJPEG(KinectSensor parentSensor, Device kinectDevice) {
 
-		super(parentSensor, kinectDevice);
-
-		name = STR_NAME;
+		super(STR_NAME, parentSensor, kinectDevice);
 	}
 
 	@Override
 	public void init() throws SensorException {
 
-		device.setVideoFormat(getParentModule().getConfiguration().irFormat);
+		device.setVideoFormat(getParentProducer().getConfiguration().irFormat);
 
 		try {
 
 			VideoCamHelper irHelper = new VideoCamHelper();
 			
             irStream = irHelper.newVideoOutputMJPEG(STR_NAME,
-            		getParentModule().getConfiguration().frameWidth, 
-            		getParentModule().getConfiguration().frameHeight);
+            		getParentProducer().getConfiguration().frameWidth, 
+            		getParentProducer().getConfiguration().frameHeight);
 
 		} catch (Exception e) {
 
@@ -76,8 +74,8 @@ class KinectInfraredOutputMJPEG extends KinectInfraredOutput {
 
 				DataBlock dataBlock = irStream.getElementType().createDataBlock();
 
-				BufferedImage bufferedImage = new BufferedImage(getParentModule().getConfiguration().frameWidth,
-						getParentModule().getConfiguration().frameHeight, BufferedImage.TYPE_BYTE_GRAY);
+				BufferedImage bufferedImage = new BufferedImage(getParentProducer().getConfiguration().frameWidth,
+						getParentProducer().getConfiguration().frameHeight, BufferedImage.TYPE_BYTE_GRAY);
 
 				byte[] channelData = ((DataBufferByte) bufferedImage.getRaster().getDataBuffer()).getData();
 				
@@ -105,8 +103,8 @@ class KinectInfraredOutputMJPEG extends KinectInfraredOutput {
 
 					latestRecordTime = System.currentTimeMillis();
 
-					eventHandler.publishEvent(
-							new SensorDataEvent(latestRecordTime, KinectInfraredOutputMJPEG.this, dataBlock));
+					eventHandler.publish(
+							new DataEvent(latestRecordTime, KinectInfraredOutputMJPEG.this, dataBlock));
 
 				} catch (IOException e) {
 

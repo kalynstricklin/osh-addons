@@ -21,11 +21,11 @@ import net.opengis.swe.v20.DataComponent;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.sensorhub.api.common.Event;
-import org.sensorhub.api.common.IEventListener;
+import org.sensorhub.api.event.Event;
+import org.sensorhub.api.event.IEventListener;
 import org.sensorhub.api.common.SensorHubException;
-import org.sensorhub.api.sensor.ISensorDataInterface;
-import org.sensorhub.api.sensor.SensorDataEvent;
+import org.sensorhub.api.data.IStreamingDataInterface;
+import org.sensorhub.api.data.DataEvent;
 import org.sensorhub.impl.SensorHub;
 import org.sensorhub.impl.comm.ble.dbus.BleDbusCommNetwork;
 import org.sensorhub.impl.comm.ble.dbus.BluetoothNetworkConfig;
@@ -50,7 +50,7 @@ public class TestAngelSensorDriverBleDbus implements IEventListener
     @Before
     public void init() throws Exception
     {
-        ModuleRegistry reg = SensorHub.getInstance().getModuleRegistry();
+        ModuleRegistry reg = new SensorHub().getModuleRegistry();
 
         BluetoothNetworkConfig netConf = new BluetoothNetworkConfig();
         netConf.id = "BLE";
@@ -72,7 +72,7 @@ public class TestAngelSensorDriverBleDbus implements IEventListener
     @Test
     public void testGetOutputDesc() throws Exception
     {
-        for (ISensorDataInterface di: driver.getObservationOutputs().values())
+        for (IStreamingDataInterface di: driver.getObservationOutputs().values())
         {
             System.out.println();
             DataComponent dataMsg = di.getRecordDescription();
@@ -94,7 +94,7 @@ public class TestAngelSensorDriverBleDbus implements IEventListener
     public void testSendMeasurements() throws Exception
     {
         System.out.println();
-        ISensorDataInterface output = driver.getObservationOutputs().get("healthData");
+        IStreamingDataInterface output = driver.getObservationOutputs().get("healthData");
         
         writer = new AsciiDataWriter();
         writer.setDataEncoding(new TextEncodingImpl(",", "\n"));
@@ -115,10 +115,10 @@ public class TestAngelSensorDriverBleDbus implements IEventListener
     
     
     @Override
-    public void handleEvent(Event<?> e)
+    public void handleEvent(Event e)
     {
-        assertTrue(e instanceof SensorDataEvent);
-        SensorDataEvent newDataEvent = (SensorDataEvent)e;
+        assertTrue(e instanceof DataEvent);
+        DataEvent newDataEvent = (DataEvent)e;
         
         try
         {
