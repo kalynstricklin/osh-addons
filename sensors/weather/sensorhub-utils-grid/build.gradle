@@ -4,7 +4,10 @@ version = '0.3.3'
 
 rootProject.allprojects {
   repositories {
-    maven { url 'https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases' }
+    maven {
+      name 'unidata'
+      url 'https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases'
+    }
   }
 }
 
@@ -12,7 +15,6 @@ dependencies {
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
   embeddedApi ('edu.ucar:grib:4.6.10') {
     exclude group: 'com.amazonaws', module: 'aws-java-sdk-s3'
-    exclude group: 'edu.ucar', module: 'jj2000'  
     exclude group: 'org.apache.httpcomponents', module: 'httpcore'
     exclude group: 'org.apache.httpcomponents', module: 'httpclient'
     exclude group: 'org.apache.httpcomponents', module: 'httpmime'
