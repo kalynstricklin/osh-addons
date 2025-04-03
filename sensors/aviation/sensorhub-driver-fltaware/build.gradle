@@ -4,7 +4,7 @@ version = '0.8.1'
 
 dependencies {
   implementation 'org.sensorhub:sensorhub-core:' + oshCoreVersion
-  implementation project(':sensorhub-driver-navdb')
+  implementation project(':sensorhub-utils-aero')
   embeddedImpl 'org.apache.httpcomponents:httpclient:4.5.13'
   embeddedImpl 'com.j2html:j2html:1.5.0'
 }

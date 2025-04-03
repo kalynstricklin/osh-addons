@@ -65,7 +65,4 @@ public class FlightAwareConfig extends SensorConfig
     
     @DisplayInfo(desc="Check to enable decoding of routes received from Firehose")
     public boolean decodeRoutes;
-    
-    @DisplayInfo(label="NavDB ID", desc="ID of navigation database module")
-    public String navDbModuleId;
 }

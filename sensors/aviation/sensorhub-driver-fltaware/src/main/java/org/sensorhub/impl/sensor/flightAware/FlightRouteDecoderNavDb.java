@@ -24,10 +24,9 @@ import java.util.LinkedList;
 import java.util.List;
 import org.sensorhub.api.common.SensorHubException;
 import org.sensorhub.impl.sensor.flightAware.DecodeFlightRouteResponse.Waypoint;
-import org.sensorhub.impl.sensor.navDb.NavDatabase;
-import org.sensorhub.impl.sensor.navDb.NavDatabase.RouteDecodeOutput;
-import org.sensorhub.impl.sensor.navDb.NavDbPointEntry;
+import org.sensorhub.utils.aero.INavDatabase;
 import org.slf4j.Logger;
+import org.vast.util.Asserts;
 import com.google.common.base.Strings;
 import j2html.rendering.FlatHtml;
 import j2html.rendering.HtmlBuilder;
@@ -44,13 +43,13 @@ import static j2html.TagCreator.*;
 public class FlightRouteDecoderNavDb implements IFlightRouteDecoder
 {
     Logger log;
-    NavDatabase navDB;
+    INavDatabase navDB;
         
     
-    public FlightRouteDecoderNavDb(FlightAwareDriver driver, String navDbModuleID)
+    public FlightRouteDecoderNavDb(FlightAwareDriver driver, INavDatabase navDB) throws SensorHubException
     {
         this.log = driver.getLogger();
-        this.navDB = NavDatabase.getInstance(driver.getParentHub(), navDbModuleID);
+        this.navDB = Asserts.checkNotNull(navDB, INavDatabase.class);
     }
     
     
@@ -60,17 +59,17 @@ public class FlightRouteDecoderNavDb implements IFlightRouteDecoder
         try
         {
             // call decoder
-            RouteDecodeOutput decodeOut = navDB.decodeRoute(route);
-            if (decodeOut == null || decodeOut.decodedRoute == null || decodeOut.decodedRoute.isEmpty())
+            var decodeOut = navDB.decodeRoute(route);
+            if (decodeOut == null || decodeOut.getWaypoints() == null || decodeOut.getWaypoints().isEmpty())
                 throw new SensorHubException("Empty response from route decoder");
-            int numWaypoints = decodeOut.decodedRoute.size();
+            int numWaypoints = decodeOut.getWaypoints().size();
             
             // build waypoint list and set altitude according to filed altitude
             int i = 0;
             ArrayList<Waypoint> waypoints = new ArrayList<>(numWaypoints);
-            for (NavDbPointEntry entry: decodeOut.decodedRoute)
+            for (var dbEntry: decodeOut.getWaypoints())
             {
-                Waypoint wp = new Waypoint(entry.id, entry.type.toString(), entry.lat, entry.lon);
+                Waypoint wp = new Waypoint(dbEntry.getCode(), dbEntry.getType(), dbEntry.getLatitude(), dbEntry.getLongitude());
                 if (i == 0 || i == numWaypoints-1)
                     wp.altitude = 0.0;
                 else if (!Strings.nullToEmpty(fltPlan.alt).trim().isEmpty())
