@@ -82,10 +82,8 @@ public class MqttMessageQueue extends AbstractSubModule<MqttMessageQueueConfig> 
                     MessageData messageData = new MessageData(attributes, mqttMessage.getPayload());
                     boolean accepted = messageQueue.offer(messageData);
 
-                    if (!accepted) {
-                        getLogger().warn("Message queue is full, dropping message from topic: {}", topic);
-                    } else {
-                        getLogger().debug("Message queued for processing from topic: {}",  topic);
+                    if (accepted){
+                        getLogger().info("Message Arrived");
                     }
 
                     Map<String, String> topicPayload = new HashMap<>();
