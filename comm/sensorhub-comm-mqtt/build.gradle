@@ -33,7 +33,7 @@ ext.pom >>= {
       organizationUrl 'http://www.botts-inc.com'
     }
     developer {
-      id 'alexalmanza'
+      id 'earocorn'
       name 'Alex Almanza'
       organization 'Botts Innovative Research'
       organizationUrl 'http://www.botts-inc.com'
