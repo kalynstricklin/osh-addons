@@ -24,10 +24,6 @@ public class MqttMessageQueueConfig extends MessageQueueConfig {
     public Protocol protocol = Protocol.TCP;
 
     @DisplayInfo.Required
-    @DisplayInfo(label="Topic", desc="")
-    public List<String> topics;
-
-    @DisplayInfo.Required
     @DisplayInfo(label="Host Address", desc="The hostname or IP address of the MQTT Broker")
     public String brokerAddress;
 
@@ -69,8 +65,8 @@ public class MqttMessageQueueConfig extends MessageQueueConfig {
         WS("ws"),
         WSS("wss"),
         TCP("tcp"),
-        MQTT("mqtt"),
-        SSL("ssl");
+        MQTT("mqtt");
+
         final String protocol;
         Protocol(String protocol) { this.protocol = protocol; }
         public String getName() { return protocol; }

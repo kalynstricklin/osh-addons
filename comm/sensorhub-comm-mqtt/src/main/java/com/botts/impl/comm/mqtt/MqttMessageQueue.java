@@ -25,12 +25,6 @@ public class MqttMessageQueue extends AbstractSubModule<MqttMessageQueueConfig> 
     private final BlockingQueue<MessageData> messageQueue = new LinkedBlockingQueue<>();
     private final Map<String, Map<String, String>> clientReceivedMqttMessage = new HashMap<>();
 
-    /**
-     * 1. connect
-     * 2. publish
-     * 3. subscribe
-     * 4. deliver
-     */
 
     /**
      * @param config
@@ -131,7 +125,7 @@ public class MqttMessageQueue extends AbstractSubModule<MqttMessageQueueConfig> 
                 connectOptions.setPassword(config.password.toCharArray());
         }
 
-        if(protocol.equals("ssl") || protocol.equals("wss"))
+        if(protocol.equals("wss"))
             connectOptions.setSocketFactory(SSLSocketFactory.getDefault());
 
         return connectOptions;
@@ -152,11 +146,8 @@ public class MqttMessageQueue extends AbstractSubModule<MqttMessageQueueConfig> 
 
         if(config.enableSubscribe){
             try{
-                for(String topic: config.topics){
-                    getLogger().info("Subscribed to topic: {}", topic);
-                    mqttClient.subscribe(topic, qos);
-                }
-//                mqttClient.subscribe(config.topicName, qos);
+                getLogger().info("Subscribed to topic: {}", config.topicName);
+                mqttClient.subscribe(config.topicName, qos);
             } catch (MqttException e) {
                 throw new RuntimeException(e);
             }
