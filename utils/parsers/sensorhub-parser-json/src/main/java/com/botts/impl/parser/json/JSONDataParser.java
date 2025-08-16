@@ -85,19 +85,16 @@ public class JSONDataParser extends AbstractDataParser implements IStreamProcess
                 Gson gson = new Gson();
 
                 try{
-                    // if json is an array may have to do reader.beginArray() and reader.endArray()
-//                    jsonReader.beginArray();
                     while(jsonReader.hasNext()){
                         JsonObject jsonObject = gson.fromJson(jsonReader, JsonObject.class);
                         if(jsonObject != null){
                             String line = gson.toJson(jsonObject);
+                            if(line.isEmpty()) continue;
                             DataBlock dataBlock = parse(line.getBytes());
                             if(dataBlock != null)
                                 consumer.accept(dataBlock);
                         }
                     }
-//                    jsonReader.endArray();
-
                 }catch (Exception e){
                     e.printStackTrace();
                 }
