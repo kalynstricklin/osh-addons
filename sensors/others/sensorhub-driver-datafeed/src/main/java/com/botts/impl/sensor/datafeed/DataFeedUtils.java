@@ -33,45 +33,7 @@ public class DataFeedUtils {
         }
     }
 
-    public static void setDataBlockField(int index, DataBlock datum, DataBlock dataBlock){
-        if (datum instanceof DataBlockInt) {
-            setFieldData(index, ((DataBlockInt)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockDouble) {
-            setFieldData(index, ((DataBlockDouble)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockString) {
-            setFieldData(index, ((DataBlockString)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockBoolean) {
-            setFieldData(index, ((DataBlockBoolean)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockByte) {
-            setFieldData(index, ((DataBlockByte)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockFloat) {
-            setFieldData(index, ((DataBlockFloat)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockLong) {
-            setFieldData(index, ((DataBlockLong)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockShort) {
-            setFieldData(index, ((DataBlockShort)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockParallel) {
-            setFieldData(index, ((DataBlockParallel)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockMixed) {
-            setFieldData(index, ((DataBlockMixed)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockCompressed) {
-            setFieldData(index, ((DataBlockCompressed)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockDateTime) {
-            setFieldData(index, ((DataBlockDateTime)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockTuple) {
-            setFieldData(index, ((DataBlockTuple)datum).getUnderlyingObject()[index], dataBlock);
-        } else if (datum instanceof DataBlockList) {
-            setFieldData(index, ((DataBlockList)datum).get(index), dataBlock);
-        } else if (datum instanceof DataBlockProxy) {
-            setDataBlockField(index, ((DataBlockProxy)datum).getDataBlock(), dataBlock);
-        } else if(datum instanceof DataBlockUShort) {
-            setFieldData(index, ((DataBlockUShort)datum).getUnderlyingObject()[index], dataBlock);
-        } else if(datum instanceof DataBlockUInt) {
-            setFieldData(index, ((DataBlockUInt)datum).getUnderlyingObject()[index], dataBlock);
-        } else if(datum instanceof DataBlockUByte) {
-            setFieldData(index, ((DataBlockUByte)datum).getUnderlyingObject()[index], dataBlock);
-        }
-    }
+
     public static SWEBuilders.DataComponentBuilder<? extends SWEBuilders.SimpleComponentBuilder<?,?>, ? extends ScalarComponent> createDataComponent(DataComponentConfig config) {
         if (config == null)
             return null;

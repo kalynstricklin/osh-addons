@@ -22,6 +22,7 @@ import net.opengis.swe.v20.DataComponent;
 import org.sensorhub.api.comm.ICommProvider;
 import org.sensorhub.api.comm.IMessageQueuePush;
 import org.sensorhub.api.common.SensorHubException;
+import org.sensorhub.api.module.ModuleEvent;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,7 @@ public class DataFeedDriver extends AbstractSensorModule<DataFeedConfig> {
         super.doStart();
 
         if(config.commType instanceof StreamConfig){
-            if (streamProvider == null && ((StreamConfig) config.commType).streamCommSettings!= null)
+            if (streamProvider == null && ((StreamConfig) config.commType).streamCommSettings != null)
                 streamProvider = (ICommProvider<?>) getParentHub().getModuleRegistry().loadSubModule(((StreamConfig) config.commType).streamCommSettings, true);
             else if (((StreamConfig) config.commType).streamCommSettings == null)
                 throw new SensorHubException("Stream communication selected but no stream comm settings specified");
@@ -156,7 +157,6 @@ public class DataFeedDriver extends AbstractSensorModule<DataFeedConfig> {
 
         messageQueueProvider.registerListener((attrs, payload) -> {
             DataBlock dataBlock = dataParser.parse(payload);
-            System.out.println("datablock: "+ dataBlock);
             output.setData(dataBlock);
         });
     }

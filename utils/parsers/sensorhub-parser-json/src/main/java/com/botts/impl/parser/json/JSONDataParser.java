@@ -6,20 +6,31 @@ import com.botts.api.parser.IStreamProcessor;
 import com.botts.api.parser.data.BaseDataType;
 import com.botts.api.parser.data.DataFeedUtils;
 import com.botts.api.parser.data.DataField;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
+import com.google.gson.*;
+import com.google.gson.stream.JsonReader;
 import net.opengis.swe.v20.DataBlock;
 import net.opengis.swe.v20.DataComponent;
 import org.sensorhub.api.common.SensorHubException;
+import org.vast.util.Asserts;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 public class JSONDataParser extends AbstractDataParser implements IStreamProcessor {
 
+    private final ExecutorService executorService;
+
+    JSONDataParserConfig config;
     public JSONDataParser(JSONDataParserConfig config, DataComponent outputStructure) {
         super(config, outputStructure);
+
+        this.config = config;
+        this.executorService = Executors.newSingleThreadExecutor();
     }
 
     public static Object findInJsonObject(JsonObject root, String key, BaseDataType dataType) {
@@ -29,7 +40,7 @@ public class JSONDataParser extends AbstractDataParser implements IStreamProcess
         for (String objKey : root.keySet()) {
             if (root.get(objKey).isJsonObject()) {
                 JsonObject object = (JsonObject) root.get(objKey);
-                return  findInJsonObject(object, key, dataType);
+                return findInJsonObject(object, key, dataType);
             }
         }
         return null;
@@ -40,6 +51,7 @@ public class JSONDataParser extends AbstractDataParser implements IStreamProcess
         DataBlock dataBlock = getRecordStructure().createDataBlock();
         String jsonString = new String(data);
         JsonObject jsonObject;
+
         try {
             jsonObject = JsonParser.parseString(jsonString).getAsJsonObject();
         } catch (JsonSyntaxException e) {
@@ -64,8 +76,52 @@ public class JSONDataParser extends AbstractDataParser implements IStreamProcess
 
     @Override
     public void processStream(InputStream inputStream, Consumer<DataBlock> consumer) {
-        // Process pretty-printed and single line
+        Asserts.checkNotNull(inputStream, "inputStream");
+        Asserts.checkNotNull(consumer, "consumer");
+
+        executorService.submit(() -> {
+            if (config.isPretty) {
+                JsonReader jsonReader = new JsonReader(new InputStreamReader(inputStream));
+                Gson gson = new Gson();
+
+                try{
+                    // if json is an array may have to do reader.beginArray() and reader.endArray()
+//                    jsonReader.beginArray();
+                    while(jsonReader.hasNext()){
+                        JsonObject jsonObject = gson.fromJson(jsonReader, JsonObject.class);
+                        if(jsonObject != null){
+                            String line = gson.toJson(jsonObject);
+                            DataBlock dataBlock = parse(line.getBytes());
+                            if(dataBlock != null)
+                                consumer.accept(dataBlock);
+                        }
+                    }
+//                    jsonReader.endArray();
+
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+            } else {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        try {
+                            if(line.isEmpty()) continue;
+                            DataBlock dataBlock = parse(line.getBytes());
+                            if (dataBlock != null) {
+                                consumer.accept(dataBlock);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
+
 
     @Override
     public void start() throws SensorHubException {
