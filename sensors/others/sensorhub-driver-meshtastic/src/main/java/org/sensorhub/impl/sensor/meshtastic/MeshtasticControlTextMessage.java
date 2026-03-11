@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class MeshtasticControlTextMessage extends AbstractSensorControl<MeshtasticSensor> {
 
-    protected static final String NAME = "textMessageControl";
+    public static final String NAME = "textMessageControl";
     protected final DataComponent commandDescription;
 
     public MeshtasticControlTextMessage(MeshtasticSensor parentSensor){

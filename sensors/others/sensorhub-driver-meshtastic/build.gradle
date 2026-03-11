@@ -5,7 +5,7 @@ plugins {
 
 description = 'Meshtastic Driver'
 ext.details = "Driver that utilizes a meshtastic Radio pre-configured with meshtastic Node Software to communicate with other meshtastic Radio"
-version = '1.0.0'
+version = '1.0.1'
 
 
 dependencies {
@@ -63,6 +63,18 @@ ext.pom >>= {
             name 'Bill Brown'
             organization 'Botts Inc'
             organizationUrl ''
+        }
+        developer {
+            id 'earocorn'
+            name 'Alex Almanza'
+            organization 'GeoRobotix Innovative Research'
+            organizationUrl 'https://georobotix.us/'
+        }
+        developer {
+            id 'kalynstricklin'
+            name 'Kalyn Stricklin'
+            organization 'GeoRobotix Innovative Research'
+            organizationUrl 'https://georobotix.us/'
         }
     }
 }

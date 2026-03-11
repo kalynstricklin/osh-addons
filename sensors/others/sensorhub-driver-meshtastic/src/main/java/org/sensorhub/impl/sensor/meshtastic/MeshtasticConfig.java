@@ -14,6 +14,7 @@ package org.sensorhub.impl.sensor.meshtastic;
 import org.sensorhub.api.comm.CommProviderConfig;
 import org.sensorhub.api.config.DisplayInfo;
 import org.sensorhub.api.sensor.SensorConfig;
+import org.sensorhub.impl.module.RobustConnectionConfig;
 
 /**
  * Configuration settings for the {@link MeshtasticSensor} driver exposed via the OpenSensorHub Admin panel.
@@ -28,13 +29,16 @@ import org.sensorhub.api.sensor.SensorConfig;
  * public Type configOption = "default value";
  * }</pre>
  */
-public class Config extends SensorConfig {
+public class MeshtasticConfig extends SensorConfig {
     /**
      * The unique identifier for the configured sensor (or sensor platform).
      */
     @DisplayInfo.Required
     @DisplayInfo(desc = "Serial number or unique identifier")
     public String serialNumber = "001";
+
+    @DisplayInfo(label="Connection Options")
+    public RobustConnectionConfig connection = new RobustConnectionConfig();
 
     @DisplayInfo(desc = "Comm settings used to interface over serial, UDP, TCP, etc.")
     public CommProviderConfig<?> commSettings;

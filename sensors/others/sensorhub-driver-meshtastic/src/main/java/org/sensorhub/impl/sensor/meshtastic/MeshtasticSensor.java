@@ -14,6 +14,7 @@ package org.sensorhub.impl.sensor.meshtastic;
 import org.meshtastic.proto.MeshProtos;
 import org.sensorhub.api.comm.ICommProvider;
 import org.sensorhub.api.common.SensorHubException;
+import org.sensorhub.impl.module.RobustConnection;
 import org.sensorhub.impl.sensor.AbstractSensorModule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +33,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * This class is responsible for providing sensor information, managing output registration,
  * and performing initialization and shutdown for the driver and its outputs.
  */
-public class MeshtasticSensor extends AbstractSensorModule<Config> {
+public class MeshtasticSensor extends AbstractSensorModule<MeshtasticConfig> {
     static final String UID_PREFIX = "urn:osh:sensor:meshtastic:";
     static final String XML_PREFIX = "meshtastic";
 
     private static final Logger logger = LoggerFactory.getLogger(MeshtasticSensor.class);
     private ICommProvider<?> commProvider;
+    RobustConnection connection;
+
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     AtomicBoolean isProcessing = new AtomicBoolean(false);
 
@@ -61,16 +64,25 @@ public class MeshtasticSensor extends AbstractSensorModule<Config> {
     @Override
     public void doInit() throws SensorHubException {
         super.doInit();
+        logger.info("=== MeshtasticSensor doInit() called ===");
 
         // Generate identifiers
         generateUniqueID(UID_PREFIX, config.serialNumber);
         generateXmlID(XML_PREFIX, config.serialNumber);
+        logger.info("Serial number: {}", config.serialNumber);
 
-        if (config.commSettings != null) {
-            commProvider = (ICommProvider<?>) getParentHub().getModuleRegistry().loadSubModule(config.commSettings, true);
-        }
+        tryConnection();
 
-        // CREATE AND INITIALIZE OUTPUTS
+        // Add outputs
+        createOutputs();
+
+        // Add controls
+        createControls();
+
+        initHandlers();
+    }
+
+    public void createOutputs() {
         textOutput = new MeshtasticOutputTextMessage(this);
         addOutput(textOutput, false);
         textOutput.doInit();
@@ -86,42 +98,71 @@ public class MeshtasticSensor extends AbstractSensorModule<Config> {
         genericOutput = new MeshtasticOutputGeneric(this);
         addOutput(genericOutput, false);
         genericOutput.doInit();
-        
-        // INITIALIZE HANDLER
-        meshtasticHandler = new MeshtasticHandler(this);
+    }
 
-        // INITIALIZE CONTROL
+    public void createControls() {
         meshtasticControlTextMessage = new MeshtasticControlTextMessage(this);
         addControlInput(meshtasticControlTextMessage);
+    }
 
+    public void initHandlers() {
+        meshtasticHandler = new MeshtasticHandler(this);
     }
 
     @Override
     public void doStart() throws SensorHubException {
-        super.doStart();
+        logger.info("=== MeshtasticSensor doStart() called ===");
+        connection.waitForConnection();
+        logger.info("Connection established, sending handshake...");
 
-        // CHECK COMM PROVIDER HAS BEEN SELECTED IN ADMIN PANEL
-        if (commProvider != null){
-            commProvider.start();
+        // send "handshake" to start receiving protobufs
+        MeshProtos.ToRadio handshake = MeshProtos.ToRadio.newBuilder()
+                // TODO: Verify response ID in future if needed
+                .setWantConfigId(0)
+                .build();
+
+        boolean sent = sendMessage(handshake);
+        logger.info("Handshake sent: {}", sent);
+
+        // BEGIN PROCESSING DATA
+        logger.info("Starting processing thread...");
+        startProcessing();
+    }
+
+    public void tryConnection() throws SensorHubException {
+        logger.debug("Attempting to connect to Meshtastic device...");
+
+        if (commProvider == null) {
+
             try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new SensorHubException("Thread interrupted while starting comm provider", e);
+                if (config.commSettings == null)
+                    throw new SensorHubException("No communication settings specified");
+
+                connection = new RobustConnection(this, config.connection, "Meshtastic Device") {
+                    @Override
+                    public boolean tryConnect() throws IOException {
+                        try {
+                            logger.info("tryConnect: Loading comm provider...");
+                            var moduleReg = getParentHub().getModuleRegistry();
+                            commProvider = (ICommProvider<?>) moduleReg.loadSubModule(config.commSettings, true);
+                            logger.info("tryConnect: Comm provider loaded: {}", commProvider.getClass().getSimpleName());
+                            commProvider.start();
+                            logger.info("tryConnect: Comm provider started, isStarted={}", commProvider.isStarted());
+
+                            return true;
+
+                        } catch (SensorHubException e) {
+                            logger.error("tryConnect failed", e);
+                            reportError("Cannot connect to Meshtastic device", e, true);
+                            return false;
+                        }
+                    }
+                };
+                connection.waitForConnection();
+            } catch (SensorHubException e) {
+                commProvider = null;
+                throw new SensorHubException("Cannot connect to Meshtastic device", e);
             }
-
-            // send "handshake" to start receiving protobufs
-            MeshProtos.ToRadio handshake = MeshProtos.ToRadio.newBuilder()
-                    // TODO: Verify response ID in future if needed
-                    .setWantConfigId(0)
-                    .build();
-
-            sendMessage(handshake);
-
-            // BEGIN PROCESSING DATA
-            startProcessing();
-        } else {
-            throw new SensorHubException("No communication provider configured");
         }
     }
 
@@ -142,11 +183,15 @@ public class MeshtasticSensor extends AbstractSensorModule<Config> {
         }
 
 
+        if(connection != null) {
+            connection.cancel();
+            connection = null;
+        }
     }
 
     @Override
     public boolean isConnected() {
-        return commProvider != null && commProvider.isInitialized();
+        return connection.isConnected();
     }
 
     // THIS METHOD IS UTILIZED IN ALL THE OUTPUTS. IT CREATES A FOI USING PARENT SENSOR METHOD
@@ -181,8 +226,10 @@ public class MeshtasticSensor extends AbstractSensorModule<Config> {
         }
 
         executor.execute(() -> {
+            logger.info("=== Processing thread started ===");
             // try-with-resources to auto-close
             try (InputStream in = commProvider.getInputStream()){
+                logger.info("Got input stream, waiting for data...");
                 isProcessing.set(true);
                 while (isProcessing.get()) {
                     int b;
@@ -245,6 +292,9 @@ public class MeshtasticSensor extends AbstractSensorModule<Config> {
             } catch (IOException e) {
                 if (isProcessing.get()) {
                     getLogger().error("Error reading from comm provider", e);
+                    if (connection != null) {
+                        connection.reconnect();
+                    }
                 }
             } finally {
                 isProcessing.set(false);

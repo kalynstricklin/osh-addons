@@ -37,6 +37,6 @@ public class Descriptor extends JarModuleProvider implements IModuleProvider {
      */
     @Override
     public Class<? extends ModuleConfig> getModuleConfigClass() {
-        return Config.class;
+        return MeshtasticConfig.class;
     }
 }
